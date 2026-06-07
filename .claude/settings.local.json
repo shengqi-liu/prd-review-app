@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /tmp/prototype)",
+      "Bash(python3 -m http.server 3400)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3400)",
+      "Bash(openspec --version)",
+      "Bash(openspec new *)",
+      "Bash(openspec instructions *)",
+      "Bash(python3 -c \"import json,sys;d=json.load\\(sys.stdin\\);print\\(d['instruction']\\);print\\('---TEMPLATE---'\\);print\\(d['template']\\)\")",
+      "Bash(mvn clean *)",
+      "Bash(java -version)",
+      "Bash(/usr/libexec/java_home -V)",
+      "Bash(pip3 install *)",
+      "Bash(chroma run *)",
+      "Bash(echo \"PID=$!\")",
+      "Bash(curl -s http://localhost:8000/api/v2/heartbeat)",
+      "Bash(which mysql *)",
+      "Bash(curl -si http://localhost:8080/api/v1/ping)",
+      "Bash(curl -s http://localhost:8080/api/v1/ping/error/biz)",
+      "Bash(curl -s http://localhost:8080/api/v1/ping/error/param)",
+      "Bash(curl -si http://localhost:8080/api/v1/ping/error/system)",
+      "Bash(pkill -f \"PrdReviewApplication\")",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(openspec status *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['artifactPaths']['specs']['existingOutputPaths']\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(/usr/local/mysql-9.7.0-macos15-arm64/bin/mysql -uroot -pLsq1990! prd_review)",
+      "Bash(/usr/local/mysql-9.7.0-macos15-arm64/bin/mysql -uroot -pLsq1990! prd_review -e 'DESCRIBE `user`;')",
+      "Bash(curl -s http://localhost:8080/actuator/health)",
+      "Bash(mvn -pl bootstrap dependency:tree -Dincludes=\"com.baomidou:mybatis-plus*,org.mybatis.spring.boot:mybatis-spring-boot-starter,org.mybatis:mybatis-spring\")",
+      "Bash(curl -s http://localhost:8080/api/v1/ping)",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/auth/register -H 'Content-Type: application/json' -d '{\"username\":\"zhangsan\",\"email\":\"zhangsan@test.com\",\"password\":\"password123\"}')",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/auth/register -H 'Content-Type: application/json' -d '{\"username\":\"zhangsan\",\"email\":\"other@test.com\",\"password\":\"password123\"}')",
+      "Bash(sed -n '1,588p' /Users/liushengqi/workspace/prd-review-app/prototype/index.html)",
+      "Bash(sed -n '633,1375p' /Users/liushengqi/workspace/prd-review-app/prototype/index.html)",
+      "Bash(sed -n '1376,1455p' /Users/liushengqi/workspace/prd-review-app/prototype/index.html)"
+    ]
+  }
+}

@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 产品方案评审系统</title>
+<style>
+:root {
+  /* ── ArcoDesign 标准色值 ── */
+
+  /* 主色：活力橙 Arco Orange-6 */
+  --primary:       #FF7D00;
+  --primary-hover: #F77234;   /* Orange-7 加深 */
+  --primary-light: #FFF7E8;   /* Orange-1 极浅底 */
+  --primary-mid:   #FFCF8B;   /* Orange-3 边框提示 */
+
+  /* 功能色：保持 Arco 体系，warning 换成黄色避免与主色撞 */
+  --success:       #00B42A;
+  --success-light: #E8FFEA;
+  --warning:       #FFB400;   /* Arco Gold-6，避免与橙色主色混淆 */
+  --warning-light: #FFFBE6;
+  --danger:        #F53F3F;
+  --danger-light:  #FFECE8;
+
+  /* 中性色：背景 / 文字 / 边框 */
+  --bg:            #F2F3F5;   /* ArcoDesign 页面底色 */
+  --bg-card:       #FFFFFF;
+  --bg-hover:      #E8E9EB;
+  --border:        #E5E6EB;   /* ArcoDesign 边框/分割线 */
+  --border-light:  #F2F3F5;
+  --text-1:        #1D2129;   /* ArcoDesign 文本主色 */
+  --text-2:        #4E5969;   /* ArcoDesign 文本次色 */
+  --text-3:        #86909C;
+  --text-4:        #C9CDD4;
+
+  /* 侧边栏：暖橙调深色（保留可读性的同时有质感） */
+  --sb-bg:         #1F1611;   /* 兜底色 */
+  --sb-bg-hover:   rgba(255,180,120,.08);
+  --sb-bg-active:  rgba(255,125,0,.18);
+  --sb-indicator:  #FF7D00;
+  --sb-text:       rgba(255,236,220,.62);
+  --sb-text-hover: rgba(255,245,235,.95);
+  --sb-text-active:#FFFFFF;
+  --sb-label:      rgba(255,210,170,.28);
+  --sb-border:     rgba(255,180,120,.08);
+  --sb-width:      220px;
+  --sb-collapsed:  54px;
+
+  --radius:    4px;
+  --radius-lg: 6px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+  --shadow:    0 2px 8px rgba(0,0,0,.08);
+  --shadow-md: 0 4px 20px rgba(0,0,0,.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text-1); font-size: 14px; }
+
+/* ===== 登录页 ===== */
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+  background: linear-gradient(120deg, #15161A 0%, #3A1A08 30%, #1A1015 60%, #2A1505 100%);
+  background-size: 300% 300%;
+  animation: bgShift 8s ease-in-out infinite;
+}
+@keyframes bgShift {
+  0%   { background-position: 0% 50%; }
+  25%  { background-position: 60% 20%; }
+  50%  { background-position: 100% 50%; }
+  75%  { background-position: 40% 80%; }
+  100% { background-position: 0% 50%; }
+}
+.login-blob { position: absolute; border-radius: 50%; filter: blur(70px); pointer-events: none; mix-blend-mode: screen; will-change: transform; }
+.login-blob.b1 { width: 560px; height: 560px; background: rgba(255,125,0,.75); top: -140px; right: -100px; animation: blob1 9s ease-in-out infinite; }
+.login-blob.b2 { width: 460px; height: 460px; background: rgba(247,114,52,.65); bottom: -120px; left: -80px; animation: blob2 11s ease-in-out infinite; }
+.login-blob.b3 { width: 380px; height: 380px; background: rgba(255,180,0,.55); top: 40%; left: 25%; animation: blob3 7s ease-in-out infinite; }
+.login-blob.b4 { width: 340px; height: 340px; background: rgba(114,46,209,.5); bottom: 15%; right: 20%; animation: blob4 10s ease-in-out infinite; }
+.login-blob.b5 { width: 260px; height: 260px; background: rgba(255,80,80,.45); top: 15%; left: 45%; animation: blob5 8s ease-in-out infinite; }
+@keyframes blob1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%     { transform: translate(-180px, 140px) scale(1.3); }
+  66%     { transform: translate(-80px, 220px)  scale(.85); }
+}
+@keyframes blob2 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%     { transform: translate(200px,-160px) scale(1.25); }
+  66%     { transform: translate(120px,-80px)  scale(.9); }
+}
+@keyframes blob3 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  25%     { transform: translate(160px,-120px) scale(1.4); }
+  50%     { transform: translate(-100px,80px) scale(.8); }
+  75%     { transform: translate(80px,160px)  scale(1.1); }
+}
+@keyframes blob4 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50%     { transform: translate(-140px,-180px) scale(1.35); }
+}
+@keyframes blob5 {
+  0%,100% { transform: translate(0,0) scale(.9); }
+  50%     { transform: translate(120px,200px) scale(1.4); }
+}
+.login-particles { position: absolute; inset: 0; pointer-events: none; opacity: .4;
+  background-image: radial-gradient(rgba(255,255,255,.55) 1px, transparent 1.2px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  animation: particleDrift 18s linear infinite;
+}
+@keyframes particleDrift { from { background-position: 0 0; } to { background-position: 280px -280px; } }
+.login-card { background: #fff; border-radius: 8px; padding: 40px 44px; width: 400px; box-shadow: 0 12px 48px rgba(0,0,0,.36); position: relative; z-index: 1; }
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border-light); }
+.login-brand-icon { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; }
+.login-brand-icon::before { content: ''; position: absolute; inset: -6px; border-radius: 50%; background: radial-gradient(circle, rgba(255,125,0,.22) 0%, rgba(255,125,0,0) 70%); animation: brandPulse 2.6s ease-in-out infinite; }
+.login-brand-icon svg { width: 48px; height: 48px; display: block; position: relative; z-index: 1; }
+@keyframes brandPulse { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.1)} }
+.lb-brain { stroke: #D25F00; stroke-width: 1.4; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.lb-fold  { stroke: rgba(210,95,0,.5); stroke-width: .8; fill: none; stroke-linecap: round; }
+.lb-node  { fill: #FF7D00; }
+.lb-check { stroke: #FF7D00; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 1.5px rgba(255,125,0,.5)); }
+.login-brand h1 { font-size: 16px; font-weight: 700; color: var(--text-1); line-height: 1.3; }
+.login-brand p { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.form-label { font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; display: block; }
+.form-input { width: 100%; padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border); font-size: 13px; outline: none; transition: all .15s; color: var(--text-1); background: #fff; }
+.form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(255,125,0,.15); }
+.form-group { margin-bottom: 16px; }
+.login-submit { width: 100%; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background .15s; }
+.login-submit:hover { background: var(--primary-hover); }
+.login-footer { text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-4); }
+
+/* ===== 主布局：flex 兄弟结构，sidebar 在流中 ===== */
+#app { display: none; height: 100vh; width: 100%; overflow: hidden; }
+.app-layout {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+/* ===== 左侧导航：普通 flex 子元素，不用 fixed ===== */
+.sidebar {
+  width: var(--sb-width);
+  flex-shrink: 0;
+  background:
+    radial-gradient(ellipse 80% 30% at 20% 0%, rgba(255,125,0,.16) 0%, transparent 70%),
+    radial-gradient(ellipse 90% 25% at 80% 100%, rgba(247,114,52,.12) 0%, transparent 70%),
+    linear-gradient(180deg, #251812 0%, #1B130E 50%, #15100C 100%);
+  display: flex; flex-direction: column;
+  height: 100vh;
+  overflow: visible;
+  transition: width .22s cubic-bezier(.4,0,.2,1);
+  position: relative;
+  z-index: 10;
+}
+.sidebar-logo, .nav-section { overflow: hidden; }
+.sidebar.collapsed { width: var(--sb-collapsed); }
+
+/* Logo区 */
+.sidebar-logo {
+  padding: 0 12px; height: 56px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--sb-border);
+  overflow: hidden; white-space: nowrap;
+}
+.logo-icon { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.logo-icon svg { width: 38px; height: 38px; display: block; }
+.lg-brain { stroke: rgba(255,255,255,.62); stroke-width: 1.3; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.lg-fold  { stroke: rgba(255,255,255,.32); stroke-width: .8; fill: none; stroke-linecap: round; }
+.lg-net   { stroke: rgba(255,255,255,.28); stroke-width: .6; fill: none; }
+.lg-node  { fill: rgba(255,255,255,.55); }
+.lg-check { stroke: var(--primary); stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 1.5px rgba(255,125,0,.55)); }
+.logo-text { overflow: hidden; }
+.logo-text h1 { font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; }
+.logo-text p { font-size: 10px; color: var(--sb-label); white-space: nowrap; margin-top: 1px; }
+
+/* 收起按钮：贴在侧栏右边缘中部，hover 侧栏才显示 */
+.sb-collapse-btn {
+  position: absolute; top: 50%; right: -11px;
+  transform: translateY(-50%);
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-2); font-size: 11px;
+  background: #fff; border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
+  opacity: 0; pointer-events: none;
+  transition: opacity .15s, background .15s, color .15s;
+  z-index: 220;
+}
+.sidebar:hover .sb-collapse-btn { opacity: 1; pointer-events: auto; }
+.sb-collapse-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+.sidebar.collapsed .sb-collapse-btn { transform: translateY(-50%) rotate(180deg); }
+.sidebar.collapsed .sidebar-logo { justify-content: center; padding: 0; }
+.sidebar.collapsed .logo-text { display: none; }
+
+/* 导航分组 */
+.nav-section { padding: 12px 8px 4px; overflow: hidden; }
+.nav-section-label {
+  font-size: 10px; font-weight: 600; color: var(--sb-label);
+  letter-spacing: .8px; text-transform: uppercase;
+  padding: 0 8px; margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden;
+  transition: opacity .15s;
+}
+.sidebar.collapsed .nav-section-label { opacity: 0; height: 0; margin: 0; padding: 0; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: var(--radius);
+  font-size: 13px; color: var(--sb-text);
+  cursor: pointer; transition: all .15s; margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden;
+  position: relative;
+}
+.nav-item:hover { background: var(--sb-bg-hover); color: var(--sb-text-hover); }
+.nav-item.active {
+  background: var(--sb-bg-active);
+  color: var(--sb-text-active);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--sb-indicator); /* 左侧蓝色指示条 */
+}
+.nav-icon { width: 18px; height: 18px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.nav-icon svg { width: 18px; height: 18px; display: block; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.nav-item.active .nav-icon svg { stroke: var(--primary); }
+.nav-label { overflow: hidden; transition: opacity .15s, width .22s; }
+.sidebar.collapsed .nav-label { opacity: 0; width: 0; }
+.nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 10px; flex-shrink: 0; transition: opacity .15s; }
+.nav-badge.blue { background: var(--primary); }
+.sidebar.collapsed .nav-badge { opacity: 0; width: 0; overflow: hidden; padding: 0; margin: 0; }
+
+/* 收起时 tooltip */
+.sidebar.collapsed .nav-item::after {
+  content: attr(data-tip);
+  position: absolute; left: calc(var(--sb-collapsed) + 4px); top: 50%;
+  transform: translateY(-50%);
+  background: #2C333A; color: #fff;
+  font-size: 12px; padding: 4px 10px; border-radius: 5px;
+  white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+  z-index: 300; box-shadow: var(--shadow-md);
+}
+.sidebar.collapsed .nav-item:hover::after { opacity: 1; }
+
+/* 用户区 */
+.sidebar-user { margin-top: auto; padding: 10px 8px; border-top: 1px solid var(--sb-border); overflow: hidden; }
+.user-card { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; overflow: hidden; }
+.user-card:hover { background: var(--sb-bg-hover); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; transition: opacity .15s; }
+.sidebar.collapsed .user-info { opacity: 0; width: 0; }
+.user-name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.85); }
+.user-role { font-size: 11px; color: var(--sb-label); }
+.sidebar.collapsed .user-card { justify-content: center; padding: 8px; }
+
+/* 移动端遮罩 */
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 150; }
+.menu-toggle { display: none; position: fixed; top: 12px; left: 12px; width: 36px; height: 36px; border-radius: 8px; background: #fff; border: 1px solid var(--border); align-items: center; justify-content: center; cursor: pointer; z-index: 210; font-size: 16px; color: var(--text-2); }
+
+/* ===== 右侧内容区 ===== */
+.content-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;          /* 撑满视口高度 */
+  overflow: hidden;       /* 自身不滚动，交给 .page-scroll */
+}
+
+/* 顶部栏：普通 flex 子元素，紧贴顶部，不用 sticky */
+.topbar {
+  flex-shrink: 0;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 100;
+}
+
+/* 步骤条也是普通 flex 子元素 */
+.steps-wrap { flex-shrink: 0; }
+.breadcrumb { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text-3); }
+.breadcrumb span { color: var(--text-1); font-weight: 500; }
+.topbar-right { display: flex; align-items: center; gap: 6px; }
+.topbar-icon-btn { width: 30px; height: 30px; border-radius: 6px; background: transparent; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3); font-size: 15px; transition: all .15s; }
+.topbar-icon-btn:hover { background: var(--bg); color: var(--text-1); }
+
+/* 步骤条 */
+.steps-wrap { background: #fff; border-bottom: 1px solid var(--border); padding: 0 28px; flex-shrink: 0; overflow-x: auto; }
+.steps { display: flex; align-items: center; height: 48px; white-space: nowrap; }
+.step { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-3); cursor: pointer; padding: 0 12px 0 0; }
+.step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--border); color: var(--text-3); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step.active .step-num { background: var(--primary); color: #fff; }
+.step.active { color: var(--primary); font-weight: 600; }
+.step.done .step-num { background: var(--success); color: #fff; }
+.step.done { color: var(--success); }
+.step-arrow { color: var(--text-4); font-size: 12px; margin-right: 12px; }
+
+/* 页面滚动容器：topbar/steps 之下，只有这层滚动 */
+.page-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+
+/* 主内容 */
+.main { padding: 24px 28px; width: 100%; }
+.page { display: none; }
+.page.active { display: block; }
+.section-title { font-size: 18px; font-weight: 700; color: var(--text-1); margin-bottom: 4px; }
+.section-sub { font-size: 13px; color: var(--text-3); margin-bottom: 22px; }
+
+/* 按钮 — ArcoDesign Button */
+.btn { padding: 5px 15px; border-radius: var(--radius); font-size: 13px; font-weight: 400; cursor: pointer; border: 1px solid transparent; transition: all .15s; display: inline-flex; align-items: center; gap: 5px; line-height: 1.6; white-space: nowrap; }
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn-outline { background: #fff; color: var(--primary); border-color: var(--primary); }
+.btn-outline:hover { background: var(--primary-light); }
+.btn-ghost { background: #fff; color: var(--text-2); border-color: var(--border); }
+.btn-ghost:hover { background: var(--bg); color: var(--text-1); border-color: #C9CDD4; }
+.btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn-danger-outline { background: #fff; color: var(--danger); border-color: #FFC4B8; }
+.btn-danger-outline:hover { background: var(--danger-light); }
+.btn-sm { padding: 3px 11px; font-size: 12px; }
+.btn-xs { padding: 1px 8px; font-size: 11px; }
+
+/* badge — ArcoDesign Tag 规范 */
+.badge { padding: 1px 8px; border-radius: 2px; font-size: 11px; font-weight: 500; display: inline-block; line-height: 1.8; }
+.badge-pass     { background: #E8FFEA; color: #009626; border: 1px solid #ACF4B4; }
+.badge-fix      { background: #FFF3E8; color: #D25F00; border: 1px solid #FFCF8B; }
+.badge-fail     { background: #FFECE8; color: #CB2020; border: 1px solid #FFC4B8; }
+.badge-draft    { background: #F2F3F5; color: #86909C; border: 1px solid #E5E6EB; }
+.badge-reviewing{ background: #FFF7E8; color: #D25F00; border: 1px solid #FFCF8B; }
+.badge-active   { background: #E8FFEA; color: #009626; border: 1px solid #ACF4B4; }
+.badge-inactive { background: #F2F3F5; color: #86909C; border: 1px solid #E5E6EB; }
+.badge-standard { background: #FFF7E8; color: #FF7D00; border: 1px solid #FFCF8B; }
+.badge-strict   { background: #F5E8FF; color: #7B21C0; border: 1px solid #D9A8FF; }
+
+/* 卡片 */
+.card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; }
+.card-sm { padding: 14px 16px; }
+
+/* 统计卡片 */
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 22px; }
+.stat-card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 16px 20px; }
+.stat-num { font-size: 26px; font-weight: 800; color: var(--text-1); font-variant-numeric: tabular-nums; }
+.stat-label { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.stat-trend { font-size: 11px; color: var(--success); margin-top: 6px; display: flex; align-items: center; gap: 3px; }
+
+/* tabs */
+.tabs { display: flex; border-bottom: 1.5px solid var(--border); margin-bottom: 18px; }
+.tab { padding: 9px 16px; font-size: 13px; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1.5px; white-space: nowrap; }
+.tab:hover { color: var(--text-1); }
+.tab.active { color: var(--primary); font-weight: 600; border-bottom-color: var(--primary); }
+
+/* 搜索栏 */
+.search-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.search-input { flex: 1; min-width: 160px; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border); font-size: 13px; outline: none; color: var(--text-1); background: #fff; }
+.search-input:focus { border-color: var(--primary); }
+.filter-select { padding: 7px 12px; border-radius: var(--radius); border: 1px solid var(--border); font-size: 13px; color: var(--text-2); outline: none; background: #fff; cursor: pointer; }
+
+/* 表格 */
+.table-wrap { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; min-width: 700px; }
+.table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--text-3); padding: 10px 16px; border-bottom: 1px solid var(--border); background: #FAFBFC; white-space: nowrap; }
+.table td { padding: 13px 16px; border-bottom: 1px solid var(--border-light); font-size: 13px; color: var(--text-2); vertical-align: middle; }
+.table tr:last-child td { border-bottom: none; }
+.table tbody tr:hover td { background: #FAFBFF; }
+
+/* PRD 列表 */
+.prd-list { display: flex; flex-direction: column; gap: 10px; }
+.prd-item { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all .15s; gap: 12px; }
+.prd-item:hover { border-color: var(--primary-mid); box-shadow: var(--shadow); }
+.prd-title { font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+.prd-meta { font-size: 12px; color: var(--text-3); display: flex; gap: 12px; flex-wrap: wrap; }
+.prd-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* Agent/风格 卡片 */
+.agent-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+.agent-card { background: #fff; border-radius: var(--radius-lg); border: 1.5px solid var(--border); padding: 16px; cursor: pointer; transition: all .15s; position: relative; }
+.agent-card:hover { border-color: var(--primary-mid); box-shadow: var(--shadow); }
+.agent-card.selected { border-color: var(--primary); background: var(--primary-light); }
+.agent-card.selected::after { content: '✓'; position: absolute; top: 10px; right: 10px; width: 18px; height: 18px; background: var(--primary); color: #fff; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+.agent-icon { font-size: 24px; margin-bottom: 8px; }
+.agent-name { font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 4px; }
+.agent-tag { font-size: 11px; color: var(--primary); background: var(--primary-light); padding: 2px 7px; border-radius: 10px; display: inline-block; margin-bottom: 7px; }
+.agent-desc { font-size: 12px; color: var(--text-3); line-height: 1.65; }
+
+.style-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+.style-card { background: #fff; border-radius: var(--radius-lg); border: 1.5px solid var(--border); padding: 16px; cursor: pointer; transition: all .15s; position: relative; }
+.style-card:hover { border-color: var(--primary-mid); box-shadow: var(--shadow); }
+.style-card.selected { border-color: var(--primary); background: var(--primary-light); }
+.style-card.selected::after { content: '✓'; position: absolute; top: 10px; right: 10px; width: 18px; height: 18px; background: var(--primary); color: #fff; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+.style-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.style-emoji { font-size: 18px; }
+.style-name { font-size: 14px; font-weight: 700; color: var(--text-1); }
+.style-default-tag { font-size: 10px; background: var(--success); color: #fff; padding: 1px 6px; border-radius: 6px; }
+.style-scene { font-size: 12px; color: var(--text-3); margin-bottom: 9px; }
+.style-rule-box { font-size: 12px; color: var(--text-2); line-height: 1.7; background: var(--bg); border-radius: 6px; padding: 9px 11px; }
+.focus-row { display: flex; gap: 6px; font-size: 12px; margin-top: 6px; }
+.focus-label { color: var(--text-4); white-space: nowrap; }
+
+/* 编辑器 */
+.editor-layout { display: grid; grid-template-columns: minmax(0,1fr) 240px; gap: 16px; }
+.editor-box { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; }
+.editor-toolbar { padding: 8px 14px; border-bottom: 1px solid var(--border-light); display: flex; gap: 4px; align-items: center; background: #FAFBFC; }
+.toolbar-btn { padding: 4px 7px; border-radius: 4px; font-size: 12px; color: var(--text-2); cursor: pointer; border: none; background: transparent; }
+.toolbar-btn:hover { background: var(--bg); }
+.toolbar-sep { width: 1px; height: 14px; background: var(--border); margin: 0 3px; }
+.editor-area { padding: 20px; min-height: 400px; font-size: 13px; line-height: 1.85; color: var(--text-2); }
+.editor-area h2 { font-size: 14px; font-weight: 700; margin: 14px 0 6px; color: var(--text-1); }
+.editor-area p { margin-bottom: 6px; }
+.editor-area .placeholder { color: var(--text-4); }
+.side-panels { display: flex; flex-direction: column; gap: 12px; }
+.panel { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 14px; }
+.panel-label { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+.tpl-item { padding: 7px 10px; border-radius: 7px; font-size: 12px; color: var(--text-2); cursor: pointer; border: 1px solid var(--border); margin-bottom: 6px; transition: all .15s; }
+.tpl-item:last-child { margin-bottom: 0; }
+.tpl-item:hover { border-color: var(--primary-mid); background: var(--primary-light); color: var(--primary); }
+.check-item { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 0; }
+.check-item.ok { color: var(--success); }
+.check-item.warn { color: var(--warning); }
+
+/* 内审 */
+.review-layout { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; }
+.anno-panel { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; }
+.anno-header { padding: 12px 16px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; background: #FAFBFC; }
+.anno-title { font-size: 13px; font-weight: 600; color: var(--text-1); display: flex; align-items: center; gap: 6px; }
+.dot-live { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: pulse 1.5s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+.anno-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; }
+.anno-item { border-left: 3px solid var(--border); padding: 8px 11px; border-radius: 0 7px 7px 0; }
+.anno-item.p0 { border-color: var(--danger); background: var(--danger-light); }
+.anno-item.p1 { border-color: var(--warning); background: var(--warning-light); }
+.anno-item.p2 { border-color: var(--primary); background: var(--primary-light); }
+.anno-level { font-size: 10px; font-weight: 700; margin-bottom: 3px; }
+.anno-item.p0 .anno-level { color: var(--danger); }
+.anno-item.p1 .anno-level { color: var(--warning); }
+.anno-item.p2 .anno-level { color: var(--primary); }
+.anno-text { font-size: 12px; color: var(--text-2); line-height: 1.65; }
+.rag-tip { padding: 9px 12px; background: var(--success-light); border-radius: 7px; border: 1px solid #A8DFC9; }
+.rag-tip-title { font-size: 11px; font-weight: 600; color: #006D47; margin-bottom: 5px; }
+.rag-tip-item { font-size: 11px; color: var(--success); line-height: 1.9; }
+.rag-tip.miss { background: var(--warning-light); border-color: #FCCB99; }
+.rag-tip.miss .rag-tip-title { color: #A85000; }
+.rag-tip.miss .rag-tip-item { color: var(--warning); }
+
+/* 评审进度 */
+.progress-card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+.prog-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.prog-row:last-child { margin-bottom: 0; }
+.prog-name { font-size: 13px; font-weight: 500; width: 110px; flex-shrink: 0; color: var(--text-1); }
+.prog-track { flex: 1; height: 5px; background: var(--bg); border-radius: 10px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 10px; background: var(--primary); }
+.prog-pct { font-size: 12px; color: var(--text-3); width: 38px; text-align: right; }
+.prog-pct.done { color: var(--success); font-weight: 600; }
+
+/* 报告 */
+.report-layout { display: grid; grid-template-columns: 160px minmax(0,1fr); gap: 20px; }
+.report-sidenav { position: sticky; top: 16px; }
+.report-nav-item { padding: 7px 12px; border-radius: var(--radius); font-size: 13px; color: var(--text-3); cursor: pointer; margin-bottom: 2px; }
+.report-nav-item:hover { background: var(--bg); color: var(--text-1); }
+.report-nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+.conclusion-card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 22px; margin-bottom: 14px; }
+.conclusion-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+.conclusion-icon { font-size: 36px; line-height: 1; }
+.conclusion-h { font-size: 20px; font-weight: 800; color: var(--warning); }
+.conclusion-sub { font-size: 13px; color: var(--text-3); margin-top: 3px; }
+.prob-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.prob-chip { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.prob-chip.p0 { background: var(--danger-light); color: #B22C35; }
+.prob-chip.p1 { background: var(--warning-light); color: #A85000; }
+.prob-chip.p2 { background: var(--primary-light); color: #B85C00; }
+.level-legend { padding: 10px 14px; background: var(--bg); border-radius: 7px; font-size: 12px; color: var(--text-3); line-height: 1.9; }
+.rag-ref-card { background: var(--success-light); border: 1px solid #A8DFC9; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 14px; }
+.rag-ref-title { font-size: 13px; font-weight: 600; color: #006D47; margin-bottom: 8px; }
+.rag-ref-file { font-size: 12px; color: var(--success); line-height: 2.1; }
+.problem-list { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; }
+.prob-list-hdr { padding: 13px 18px; border-bottom: 1px solid var(--border-light); font-size: 13px; font-weight: 600; color: var(--text-1); display: flex; align-items: center; justify-content: space-between; background: #FAFBFC; }
+.prob-item { padding: 14px 18px; border-bottom: 1px solid var(--border-light); }
+.prob-item:last-child { border-bottom: none; }
+.prob-top { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 7px; }
+.p-chip { padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.p-chip.p0 { background: var(--danger-light); color: #B22C35; }
+.p-chip.p1 { background: var(--warning-light); color: #A85000; }
+.p-chip.p2 { background: var(--primary-light); color: #B85C00; }
+.p-title { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.p-desc { font-size: 12px; color: var(--text-3); line-height: 1.75; margin-bottom: 8px; }
+.p-suggest { font-size: 12px; color: var(--text-2); background: var(--bg); border-radius: 7px; padding: 9px 12px; line-height: 1.75; }
+.p-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; flex-wrap: wrap; gap: 8px; }
+.p-agent-tag { font-size: 11px; color: var(--text-4); }
+.p-feedback { display: flex; gap: 6px; }
+.fb-btn { padding: 3px 9px; border-radius: 5px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--text-3); transition: all .12s; }
+.fb-btn:hover { border-color: var(--primary); color: var(--primary); }
+.chat-trigger { font-size: 12px; color: var(--primary); cursor: pointer; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; }
+.chat-box { margin-top: 10px; background: var(--primary-light); border-radius: 8px; padding: 12px; display: none; }
+.chat-box.open { display: block; }
+.chat-msg { font-size: 12px; color: var(--text-2); line-height: 1.75; margin-bottom: 9px; }
+.chat-row { display: flex; gap: 7px; }
+.chat-input { flex: 1; padding: 6px 11px; border-radius: 7px; border: 1.5px solid var(--primary-mid); font-size: 12px; outline: none; background: #fff; }
+.chat-input:focus { border-color: var(--primary); }
+
+/* Agent/风格管理 */
+.manage-card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 18px 20px; margin-bottom: 12px; display: flex; gap: 16px; align-items: flex-start; transition: box-shadow .15s; }
+.manage-card:hover { box-shadow: var(--shadow); }
+.manage-card-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+.manage-info { flex: 1; min-width: 0; }
+.manage-name { font-size: 14px; font-weight: 700; color: var(--text-1); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.manage-desc { font-size: 13px; color: var(--text-3); line-height: 1.65; margin-bottom: 10px; }
+.prompt-preview { font-size: 12px; color: var(--text-2); background: var(--bg); border-radius: 7px; padding: 10px 12px; line-height: 1.75; border-left: 3px solid var(--primary-mid); margin-bottom: 12px; }
+.manage-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.style-manage-card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 18px 20px; margin-bottom: 12px; transition: box-shadow .15s; }
+.style-manage-card:hover { box-shadow: var(--shadow); }
+.style-manage-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+.style-manage-name { font-size: 14px; font-weight: 700; color: var(--text-1); display: flex; align-items: center; gap: 8px; }
+.style-rules-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-top: 12px; }
+.style-rule-cell { background: var(--bg); border-radius: 7px; padding: 10px 12px; }
+.style-rule-lbl { font-size: 11px; font-weight: 600; color: var(--text-3); margin-bottom: 4px; }
+.style-rule-val { font-size: 12px; color: var(--text-2); line-height: 1.65; }
+
+/* 知识库 */
+.kb-stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+.kb-stat { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 16px 18px; }
+.kb-stat-num { font-size: 22px; font-weight: 800; color: var(--text-1); }
+.kb-stat-lbl { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+.kb-query-box { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 18px; margin-bottom: 18px; }
+.kb-query-input { width: 100%; padding: 9px 14px; border-radius: var(--radius); border: 1px solid var(--border); font-size: 13px; outline: none; margin-bottom: 10px; color: var(--text-1); }
+.kb-query-input:focus { border-color: var(--primary); }
+.kb-result { background: var(--primary-light); border-radius: 8px; padding: 11px 14px; margin-bottom: 8px; border-left: 3px solid var(--primary); }
+.kb-result-path { font-size: 11px; color: var(--primary); margin-bottom: 4px; font-family: 'SF Mono', Consolas, monospace; }
+.kb-result-content { font-size: 13px; color: var(--text-2); line-height: 1.75; }
+.kb-result-score { font-size: 11px; color: var(--text-4); margin-top: 4px; }
+.kb-file-item { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 12px; }
+.kb-file-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+.kb-file-path { font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 3px; font-family: 'SF Mono', Consolas, monospace; }
+.kb-file-meta { font-size: 12px; color: var(--text-3); display: flex; gap: 14px; flex-wrap: wrap; }
+.kb-chunks { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.kb-chunk { font-size: 11px; background: var(--success-light); color: #006D47; padding: 2px 8px; border-radius: 5px; border: 1px solid #A8DFC9; }
+
+/* 提示 tip — ArcoDesign Alert */
+.tip-bar { display: flex; align-items: flex-start; gap: 10px; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; border: 1px solid transparent; }
+.tip-bar.success { background: #E8FFEA; border-color: #ACF4B4; color: #009626; }
+.tip-bar.info    { background: #FFF7E8; border-color: #FFCF8B; color: #D25F00; }
+.tip-bar.warning { background: #FFF3E8; border-color: #FFCF8B; color: #D25F00; }
+.selected-tip { background: var(--primary-light); border: 1.5px solid var(--primary-mid); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--primary); margin-bottom: 16px; }
+
+/* 底部操作栏：sticky 在 page-scroll 滚动容器底部 */
+.bottom-bar { background: #fff; border-top: 1px solid var(--border); padding: 13px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; bottom: 0; z-index: 50; }
+.bottom-info { font-size: 13px; color: var(--text-3); }
+.bottom-actions { display: flex; gap: 10px; }
+
+/* ===== 响应式 ===== */
+@media (max-width: 1100px) {
+  .stat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 900px) {
+  .agent-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .kb-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .style-rules-grid { grid-template-columns: 1fr; }
+  .report-layout { grid-template-columns: minmax(0,1fr); }
+  .report-sidenav { display: none; }
+}
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed; top: 0; left: 0; z-index: 200;
+    transform: translateX(-100%);
+    transition: transform .22s;
+    width: 220px !important;
+  }
+  .sidebar.open { transform: translateX(0); box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+  .sidebar-overlay.show { display: block; }
+  .content-area { width: 100%; }
+  .menu-toggle { display: flex; }
+  .sb-collapse-btn { display: none; }
+  .main { padding: 16px; }
+  .topbar { padding: 0 16px 0 56px; }
+  .steps-wrap { padding: 0 16px; }
+  .bottom-bar { padding: 12px 16px; }
+  .style-grid { grid-template-columns: 1fr; }
+  .editor-layout { grid-template-columns: 1fr; }
+  .review-layout { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 480px) {
+  .agent-grid { grid-template-columns: 1fr; }
+  .login-card { width: calc(100% - 32px); margin: 16px; padding: 28px 20px; }
+  .prd-right { display: none; }
+  .bottom-actions .btn-ghost:first-child { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 登录页 ===== -->
+<div id="login-page">
+  <div class="login-wrap">
+    <div class="login-blob b1"></div>
+    <div class="login-blob b2"></div>
+    <div class="login-blob b3"></div>
+    <div class="login-blob b4"></div>
+    <div class="login-blob b5"></div>
+    <div class="login-particles"></div>
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-brand-icon">
+          <svg viewBox="0 0 32 32">
+            <path class="lb-brain" d="M15.5 5.5c-2-1.6-5-1.2-6.4.8-1.4-.2-2.8.6-3.3 2-.7.4-1.2 1.2-1.2 2.2 0 .9.4 1.7 1.1 2.2-.3 1.4.4 2.8 1.7 3.4-.1 1.5 1 2.9 2.5 3.1.4 1.4 1.7 2.4 3.2 2.4 1.1 0 2.1-.5 2.7-1.4V5.5Z"/>
+            <path class="lb-brain" d="M16.5 5.5c2-1.6 5-1.2 6.4.8 1.4-.2 2.8.6 3.3 2 .7.4 1.2 1.2 1.2 2.2 0 .9-.4 1.7-1.1 2.2.3 1.4-.4 2.8-1.7 3.4.1 1.5-1 2.9-2.5 3.1-.4 1.4-1.7 2.4-3.2 2.4-1.1 0-2.1-.5-2.7-1.4V5.5Z"/>
+            <path class="lb-fold" d="M16 5.5v15M12 9c1 .8 2 1 3 .6M20 9c-1 .8-2 1-3 .6M11 14c1.4.8 3 1 4.2.4M21 14c-1.4.8-3 1-4.2.4"/>
+            <circle class="lb-node" cx="10" cy="10" r="1"/>
+            <circle class="lb-node" cx="22" cy="10" r="1"/>
+            <circle class="lb-node" cx="9"  cy="15" r="1"/>
+            <circle class="lb-node" cx="23" cy="15" r="1"/>
+            <circle class="lb-node" cx="13" cy="19" r="1"/>
+            <circle class="lb-node" cx="19" cy="19" r="1"/>
+            <path class="lb-check" d="m11.5 15 3 3 6-6"/>
+          </svg>
+        </div>
+        <div>
+          <h1>AI 产品方案评审系统</h1>
+          <p>多角色 Agent · 业务知识库 · 智能评审</p>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">账号</label>
+        <input class="form-input" type="text" placeholder="请输入邮箱或工号" value="pm@company.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">密码</label>
+        <input class="form-input" type="password" placeholder="请输入密码" value="••••••••">
+      </div>
+      <button class="login-submit" onclick="showApp()">登 录</button>
+      <div class="login-footer">© 2024 AI Review System · 产品团队内部使用</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 主应用 ===== -->
+<div id="app">
+  <!-- 移动端汉堡 -->
+  <div class="menu-toggle" onclick="toggleSidebar()">☰</div>
+  <div class="sidebar-overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+  <div class="app-layout">
+    <!-- 左侧导航 -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 32 32">
+            <!-- 大脑左右半球轮廓 -->
+            <path class="lg-brain" d="M15.5 5.5c-2-1.6-5-1.2-6.4.8-1.4-.2-2.8.6-3.3 2-.7.4-1.2 1.2-1.2 2.2 0 .9.4 1.7 1.1 2.2-.3 1.4.4 2.8 1.7 3.4-.1 1.5 1 2.9 2.5 3.1.4 1.4 1.7 2.4 3.2 2.4 1.1 0 2.1-.5 2.7-1.4V5.5Z"/>
+            <path class="lg-brain" d="M16.5 5.5c2-1.6 5-1.2 6.4.8 1.4-.2 2.8.6 3.3 2 .7.4 1.2 1.2 1.2 2.2 0 .9-.4 1.7-1.1 2.2.3 1.4-.4 2.8-1.7 3.4.1 1.5-1 2.9-2.5 3.1-.4 1.4-1.7 2.4-3.2 2.4-1.1 0-2.1-.5-2.7-1.4V5.5Z"/>
+            <!-- 中线脑回 -->
+            <path class="lg-fold" d="M16 5.5v15M12 9c1 .8 2 1 3 .6M20 9c-1 .8-2 1-3 .6M11 14c1.4.8 3 1 4.2.4M21 14c-1.4.8-3 1-4.2.4"/>
+            <!-- 神经网络节点 -->
+            <circle class="lg-node" cx="10"   cy="10"  r="1"/>
+            <circle class="lg-node" cx="22"   cy="10"  r="1"/>
+            <circle class="lg-node" cx="9"    cy="15"  r="1"/>
+            <circle class="lg-node" cx="23"   cy="15"  r="1"/>
+            <circle class="lg-node" cx="13"   cy="19"  r="1"/>
+            <circle class="lg-node" cx="19"   cy="19"  r="1"/>
+            <!-- 勾选 -->
+            <path class="lg-check" d="m11.5 15 3 3 6-6"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <h1>AI 评审系统</h1>
+          <p>产品团队工作台</p>
+        </div>
+        <button class="sb-collapse-btn" onclick="toggleCollapse()" title="收起菜单">◀</button>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">评审工作台</div>
+        <div class="nav-item active" data-tip="我的方案" onclick="navTo('list',this)">
+          <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v3H9z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4.5"/></svg></span>
+          <span class="nav-label">我的方案</span>
+          <span class="nav-badge blue">6</span>
+        </div>
+        <div class="nav-item" data-tip="评审管理" onclick="navTo('review-manage',this)">
+          <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></span>
+          <span class="nav-label">评审管理</span>
+          <span class="nav-badge">2</span>
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">系统配置</div>
+        <div class="nav-item" data-tip="AI 评审员" onclick="navTo('reviewer-manage',this)">
+          <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="4.5" y="8" width="15" height="11" rx="2.5"/><path d="M12 4.5v3.5M9 13h.01M15 13h.01"/><path d="M9.5 16.5h5"/><path d="M2.5 12v3M21.5 12v3"/><circle cx="12" cy="3.5" r="1"/></svg></span>
+          <span class="nav-label">AI 评审员</span>
+        </div>
+        <div class="nav-item" data-tip="评审风格" onclick="navTo('style-manage',this)">
+          <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3.5c-4.7 0-8.5 3.6-8.5 8 0 3 2.5 5 5 5h1.2c1 0 1.8.8 1.8 1.8v.7c0 .8.7 1.5 1.5 1.5 4.7 0 8.5-3.6 8.5-8 0-4.9-4.3-9-9.5-9Z"/><circle cx="7.5" cy="11" r=".9" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.5" r=".9" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r=".9" fill="currentColor" stroke="none"/><circle cx="17" cy="10.5" r=".9" fill="currentColor" stroke="none"/></svg></span>
+          <span class="nav-label">评审风格</span>
+        </div>
+        <div class="nav-item" data-tip="知识库" onclick="navTo('kb',this)">
+          <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5.5c0-.6.4-1 1-1h5c1.1 0 2 .9 2 2v14c0-1.1-.9-2-2-2H5c-.6 0-1-.4-1-1V5.5Z"/><path d="M20 5.5c0-.6-.4-1-1-1h-5c-1.1 0-2 .9-2 2v14c0-1.1.9-2 2-2h5c.6 0 1-.4 1-1V5.5Z"/><path d="M6.5 8.5h3M6.5 11.5h3M14.5 8.5h3M14.5 11.5h3"/></svg></span>
+          <span class="nav-label">知识库</span>
+        </div>
+      </div>
+
+      <div class="sidebar-user">
+        <div class="user-card">
+          <div class="avatar">PM</div>
+          <div class="user-info">
+            <div class="user-name">张产品</div>
+            <div class="user-role">产品经理</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧内容 -->
+    <div class="content-area">
+      <div class="topbar" id="topbar">
+        <div class="breadcrumb" id="breadcrumb"><span>我的方案</span></div>
+        <div class="topbar-right">
+          <div class="topbar-icon-btn">🔔</div>
+          <div class="topbar-icon-btn">⚙</div>
+        </div>
+      </div>
+
+      <div id="steps-wrap" style="display:none">
+        <div class="steps-wrap">
+          <div class="steps">
+            <div class="step done" onclick="navTo('list',null)"><div class="step-num">✓</div> 方案列表</div>
+            <div class="step-arrow">›</div>
+            <div class="step" id="s-edit"><div class="step-num">1</div> 编写方案</div>
+            <div class="step-arrow">›</div>
+            <div class="step" id="s-agent"><div class="step-num">2</div> 评审员</div>
+            <div class="step-arrow">›</div>
+            <div class="step" id="s-style"><div class="step-num">3</div> 风格</div>
+            <div class="step-arrow">›</div>
+            <div class="step" id="s-precheck"><div class="step-num">4</div> 内审</div>
+            <div class="step-arrow">›</div>
+            <div class="step" id="s-report"><div class="step-num">5</div> 报告</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 页面内容滚动区 ===== -->
+      <div class="page-scroll">
+
+      <!-- ===== 我的方案 ===== -->
+      <div id="page-list" class="page active">
+        <div class="main">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <div><div class="section-title">我的方案</div><div class="section-sub">管理和追踪所有 PRD 评审</div></div>
+            <button class="btn btn-primary" onclick="goStep('edit')">＋ 新建方案</button>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">全部方案</div></div>
+            <div class="stat-card"><div class="stat-num" style="color:var(--success)">3</div><div class="stat-label">已通过</div><div class="stat-trend">↑ 本月 +2</div></div>
+            <div class="stat-card"><div class="stat-num" style="color:var(--warning)">1</div><div class="stat-label">待修改</div></div>
+            <div class="stat-card"><div class="stat-num" style="color:var(--primary)">2</div><div class="stat-label">评审中</div></div>
+          </div>
+          <div class="tabs">
+            <div class="tab active">全部 (6)</div><div class="tab">待评审 (1)</div>
+            <div class="tab">已通过 (3)</div><div class="tab">需修改 (1)</div><div class="tab">未通过 (1)</div>
+          </div>
+          <div class="search-bar">
+            <input class="search-input" placeholder="🔍 搜索方案名称…">
+            <select class="filter-select"><option>全部评审员</option><option>产品顾问</option><option>技术架构师</option></select>
+            <select class="filter-select"><option>全部风格</option><option>标准</option><option>严谨</option></select>
+          </div>
+          <div class="prd-list">
+            <div class="prd-item" onclick="goStep('report')">
+              <div><div class="prd-title">用户积分体系 v2.0 改版方案</div><div class="prd-meta"><span>2024-01-15</span><span>产品顾问 · 商业分析师</span><span>标准</span></div></div>
+              <div class="prd-right"><span class="badge badge-fix">修改后通过</span><span style="color:var(--text-4);font-size:16px">›</span></div>
+            </div>
+            <div class="prd-item">
+              <div><div class="prd-title">商品详情页 AI 推荐功能</div><div class="prd-meta"><span>2024-01-14</span><span>产品顾问 · 技术架构师 · 商业分析师</span><span>严谨</span></div></div>
+              <div class="prd-right"><span class="badge badge-pass">PRD 通过</span><span style="color:var(--text-4);font-size:16px">›</span></div>
+            </div>
+            <div class="prd-item" onclick="goStep('edit')">
+              <div><div class="prd-title">搜索结果页筛选优化</div><div class="prd-meta"><span>2024-01-13</span><span>草稿</span></div></div>
+              <div class="prd-right"><span class="badge badge-draft">草稿</span><span style="color:var(--text-4);font-size:16px">›</span></div>
+            </div>
+            <div class="prd-item">
+              <div><div class="prd-title">会员付费订阅功能方案</div><div class="prd-meta"><span>2024-01-12</span><span>评审中 · 4 个评审员</span></div></div>
+              <div class="prd-right"><span class="badge badge-reviewing">评审中</span><span style="color:var(--text-4);font-size:16px">›</span></div>
+            </div>
+            <div class="prd-item">
+              <div><div class="prd-title">新用户引导流程重设计</div><div class="prd-meta"><span>2024-01-10</span><span>产品顾问</span><span>宽松</span></div></div>
+              <div class="prd-right"><span class="badge badge-pass">PRD 通过</span><span style="color:var(--text-4);font-size:16px">›</span></div>
+            </div>
+            <div class="prd-item">
+              <div><div class="prd-title">订单退款流程优化方案</div><div class="prd-meta"><span>2024-01-08</span><span>合规风控官 · 产品顾问</span><span>严谨</span></div></div>
+              <div class="prd-right"><span class="badge badge-fail">不通过</span><span style="color:var(--text-4);font-size:16px">›</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 评审管理 ===== -->
+      <div id="page-review-manage" class="page">
+        <div class="main">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <div><div class="section-title">评审管理</div><div class="section-sub">查看全量评审记录，追踪质量趋势</div></div>
+            <button class="btn btn-ghost btn-sm">↓ 导出记录</button>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-card"><div class="stat-num">28</div><div class="stat-label">累计评审次数</div></div>
+            <div class="stat-card"><div class="stat-num" style="color:var(--success)">68%</div><div class="stat-label">一次通过率</div><div class="stat-trend">↑ 较上月 +5%</div></div>
+            <div class="stat-card"><div class="stat-num" style="color:var(--primary)">4.2</div><div class="stat-label">意见有用率（/5）</div></div>
+            <div class="stat-card"><div class="stat-num" style="color:var(--warning)">38s</div><div class="stat-label">平均评审耗时</div></div>
+          </div>
+          <div class="tabs"><div class="tab active">全部记录</div><div class="tab">进行中 (2)</div><div class="tab">已完成</div></div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>方案名称</th><th>评审员</th><th>风格</th><th>结论</th><th>问题</th><th>耗时</th><th>时间</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr><td style="font-weight:600;color:var(--text-1)">用户积分体系 v2.0</td><td>产品顾问 · 商业分析师</td><td><span class="badge badge-standard">标准</span></td><td><span class="badge badge-fix">修改后通过</span></td><td style="color:var(--text-2)">P1×2 P2×3</td><td>42s</td><td style="color:var(--text-3)">01-15</td><td><button class="btn btn-ghost btn-xs" onclick="goStep('report')">查看</button></td></tr>
+                <tr><td style="font-weight:600;color:var(--text-1)">商品详情页 AI 推荐</td><td>产品顾问 · 技术架构师 · 商业分析师</td><td><span class="badge badge-strict">严谨</span></td><td><span class="badge badge-pass">PRD 通过</span></td><td style="color:var(--text-2)">P2×2</td><td>87s</td><td style="color:var(--text-3)">01-14</td><td><button class="btn btn-ghost btn-xs">查看</button></td></tr>
+                <tr><td style="font-weight:600;color:var(--text-1)">会员付费订阅功能</td><td>全部评审员 (5)</td><td><span class="badge badge-strict">严谨</span></td><td><span class="badge badge-reviewing">评审中</span></td><td>—</td><td style="color:var(--primary)">进行中</td><td style="color:var(--text-3)">01-12</td><td><button class="btn btn-ghost btn-xs">进度</button></td></tr>
+                <tr><td style="font-weight:600;color:var(--text-1)">新用户引导流程</td><td>产品顾问</td><td><span class="badge badge-draft">宽松</span></td><td><span class="badge badge-pass">PRD 通过</span></td><td style="color:var(--text-2)">P1×1</td><td>18s</td><td style="color:var(--text-3)">01-10</td><td><button class="btn btn-ghost btn-xs">查看</button></td></tr>
+                <tr><td style="font-weight:600;color:var(--text-1)">订单退款流程优化</td><td>合规风控官 · 产品顾问</td><td><span class="badge badge-strict">严谨</span></td><td><span class="badge badge-fail">不通过</span></td><td style="color:var(--danger)">P0×1 P1×3</td><td>65s</td><td style="color:var(--text-3)">01-08</td><td><button class="btn btn-ghost btn-xs">查看</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== AI 评审员 ===== -->
+      <div id="page-reviewer-manage" class="page">
+        <div class="main">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <div><div class="section-title">AI 评审员</div><div class="section-sub">配置评审员角色定位与 Prompt 模板</div></div>
+            <button class="btn btn-primary">＋ 新建评审员</button>
+          </div>
+          <div class="manage-card">
+            <div class="manage-card-icon">🧑‍💼</div>
+            <div class="manage-info">
+              <div class="manage-name">产品顾问 <span class="badge badge-active">启用</span></div>
+              <div class="manage-desc">从用户价值视角评审需求合理性、用户故事完整性、核心流程逻辑，识别用户体验风险。</div>
+              <div class="prompt-preview">你是一名拥有 10 年经验的资深产品经理，专注于用户体验和需求价值评估。请从用户视角对以下 PRD 进行评审，重点关注：① 需求是否真实存在且有足够规模；② 用户故事是否完整覆盖主流程和异常流程；③ 功能设计是否符合用户心智模型…</div>
+              <div class="manage-actions">
+                <button class="btn btn-ghost btn-sm">✏️ 编辑 Prompt</button>
+                <button class="btn btn-ghost btn-sm">🧪 测试</button>
+                <button class="btn btn-danger-outline btn-sm">停用</button>
+              </div>
+            </div>
+          </div>
+          <div class="manage-card">
+            <div class="manage-card-icon">🏗️</div>
+            <div class="manage-info">
+              <div class="manage-name">技术架构师 <span class="badge badge-active">启用</span></div>
+              <div class="manage-desc">从技术可行性角度评估实现路径、依赖风险、技术负债，识别潜在性能和架构隐患。</div>
+              <div class="prompt-preview">你是一名拥有 12 年经验的资深技术架构师，熟悉后端、前端和移动端技术栈。请从技术可行性角度评审以下 PRD，重点关注：① 功能实现的技术复杂度和工期预估；② 第三方依赖和外部服务风险；③ 潜在的性能瓶颈和扩展性问题…</div>
+              <div class="manage-actions">
+                <button class="btn btn-ghost btn-sm">✏️ 编辑 Prompt</button>
+                <button class="btn btn-ghost btn-sm">🧪 测试</button>
+                <button class="btn btn-danger-outline btn-sm">停用</button>
+              </div>
+            </div>
+          </div>
+          <div class="manage-card">
+            <div class="manage-card-icon">📊</div>
+            <div class="manage-info">
+              <div class="manage-name">商业分析师 <span class="badge badge-active">启用</span></div>
+              <div class="manage-desc">从 ROI 和商业模式角度评估市场机会、收益预测，识别商业风险与增长机会。</div>
+              <div class="prompt-preview">你是一名拥有 8 年经验的商业分析师，擅长市场分析和商业模式评估。请从商业价值角度评审以下 PRD，重点关注：① 市场规模和商业机会的合理性；② 收益预测的假设是否可信；③ 商业模式中的关键风险点…</div>
+              <div class="manage-actions">
+                <button class="btn btn-ghost btn-sm">✏️ 编辑 Prompt</button>
+                <button class="btn btn-ghost btn-sm">🧪 测试</button>
+                <button class="btn btn-danger-outline btn-sm">停用</button>
+              </div>
+            </div>
+          </div>
+          <div class="manage-card">
+            <div class="manage-card-icon">🔍</div>
+            <div class="manage-info">
+              <div class="manage-name">竞品研究员 <span class="badge badge-active">启用</span></div>
+              <div class="manage-desc">对比行业竞品方案，识别差异化机会，评估产品护城河与竞争优势。</div>
+              <div class="prompt-preview">你是一名拥有 6 年经验的竞品研究专家，熟悉主流互联网产品设计逻辑。请对比行业竞品对以下 PRD 进行评审，重点关注差异化策略和竞争壁垒…</div>
+              <div class="manage-actions">
+                <button class="btn btn-ghost btn-sm">✏️ 编辑 Prompt</button>
+                <button class="btn btn-ghost btn-sm">🧪 测试</button>
+                <button class="btn btn-danger-outline btn-sm">停用</button>
+              </div>
+            </div>
+          </div>
+          <div class="manage-card" style="opacity:.65">
+            <div class="manage-card-icon">🛡️</div>
+            <div class="manage-info">
+              <div class="manage-name">合规风控官 <span class="badge badge-inactive">已停用</span></div>
+              <div class="manage-desc">检查数据安全、隐私保护、法律合规风险，识别监管红线。</div>
+              <div class="manage-actions">
+                <button class="btn btn-ghost btn-sm">✏️ 编辑 Prompt</button>
+                <button class="btn btn-ghost btn-sm">🧪 测试</button>
+                <button class="btn btn-primary btn-sm">启用</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 评审风格 ===== -->
+      <div id="page-style-manage" class="page">
+        <div class="main">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <div><div class="section-title">评审风格</div><div class="section-sub">配置风格规则，定义评审深度与约束条件</div></div>
+            <button class="btn btn-primary">＋ 新建风格</button>
+          </div>
+          <div class="style-manage-card">
+            <div class="style-manage-hdr">
+              <div class="style-manage-name">⚡ 宽松 <span class="badge badge-active">启用</span></div>
+              <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">✏️ 编辑</button><button class="btn btn-danger-outline btn-sm">停用</button></div>
+            </div>
+            <div style="font-size:12px;color:var(--text-3)">适用：小迭代 · 紧急优化 · 功能微调</div>
+            <div class="style-rules-grid">
+              <div class="style-rule-cell"><div class="style-rule-lbl">问题级别</div><div class="style-rule-val">仅排查 P0 / P1</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">输出上限</div><div class="style-rule-val">最多 5 条</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">忽略项</div><div class="style-rule-val">体验细节、文案、非刚需建议</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">输出格式</div><div class="style-rule-val">精简扼要</div></div>
+            </div>
+          </div>
+          <div class="style-manage-card">
+            <div class="style-manage-hdr">
+              <div class="style-manage-name">🎯 务实 <span class="badge badge-active">启用</span></div>
+              <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">✏️ 编辑</button><button class="btn btn-danger-outline btn-sm">停用</button></div>
+            </div>
+            <div style="font-size:12px;color:var(--text-3)">适用：排期紧 · 快速试错 · 敏捷迭代</div>
+            <div class="style-rules-grid">
+              <div class="style-rule-cell"><div class="style-rule-lbl">问题分档</div><div class="style-rule-val">本期必改 / 下期迭代 / 可接受</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">成本标注</div><div class="style-rule-val">每条标注整改成本 小/中/大</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">建议要求</div><div class="style-rule-val">拒绝空泛，贴合落地场景</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">输出格式</div><div class="style-rule-val">可直接作为排期输入</div></div>
+            </div>
+          </div>
+          <div class="style-manage-card" style="border-color:var(--primary)">
+            <div class="style-manage-hdr">
+              <div class="style-manage-name">📋 标准 <span class="badge badge-active">启用</span> <span style="font-size:10px;background:var(--success);color:#fff;padding:1px 7px;border-radius:6px">默认</span></div>
+              <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">✏️ 编辑</button><span style="font-size:12px;color:var(--text-4);padding:5px 10px;align-self:center">默认不可停用</span></div>
+            </div>
+            <div style="font-size:12px;color:var(--text-3)">适用：常规立项 · 正式版本评审</div>
+            <div class="style-rules-grid">
+              <div class="style-rule-cell"><div class="style-rule-lbl">问题级别</div><div class="style-rule-val">全维度，P0/P1 必改，P2 可选</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">输出要求</div><div class="style-rule-val">描述完整、风险清晰、建议落地</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">评审态度</div><div class="style-rule-val">中立客观，不宽松不苛刻</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">输出格式</div><div class="style-rule-val">标准结构化报告</div></div>
+            </div>
+          </div>
+          <div class="style-manage-card">
+            <div class="style-manage-hdr">
+              <div class="style-manage-name">🔬 严谨 <span class="badge badge-active">启用</span></div>
+              <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">✏️ 编辑</button><button class="btn btn-danger-outline btn-sm">停用</button></div>
+            </div>
+            <div style="font-size:12px;color:var(--text-3)">适用：大版本 · 核心功能 · 商业化付费功能</div>
+            <div class="style-rules-grid">
+              <div class="style-rule-cell"><div class="style-rule-lbl">问题级别</div><div class="style-rule-val">全量检出，P2 升级为整改项</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">必填字段</div><div class="style-rule-val">每条附影响范围 + 出现概率</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">覆盖范围</div><div class="style-rule-val">含隐性体验、技术债、轻度合规</div></div>
+              <div class="style-rule-cell"><div class="style-rule-lbl">输出格式</div><div class="style-rule-val">超详细整改方案，零容忍</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 知识库 ===== -->
+      <div id="page-kb" class="page">
+        <div class="main">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <div><div class="section-title">知识库</div><div class="section-sub">本地 Git 仓库 · Markdown 自动索引 · 语义检索</div></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-ghost btn-sm">🔄 重建索引</button>
+              <button class="btn btn-outline btn-sm">⚙ 配置路径</button>
+            </div>
+          </div>
+          <div class="kb-stats">
+            <div class="kb-stat">
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px"><div class="dot-live"></div><span style="font-size:12px;color:var(--success);font-weight:600">索引正常</span></div>
+              <div class="kb-stat-num">38</div><div class="kb-stat-lbl">已索引文档</div>
+            </div>
+            <div class="kb-stat"><div class="kb-stat-num">312</div><div class="kb-stat-lbl">文档块数量</div></div>
+            <div class="kb-stat"><div class="kb-stat-num" style="font-size:16px;margin-top:6px">今天 09:15</div><div class="kb-stat-lbl">最后更新</div></div>
+          </div>
+          <div class="kb-query-box">
+            <div style="font-size:13px;font-weight:600;color:var(--text-1);margin-bottom:12px">🔍 检索测试</div>
+            <input class="kb-query-input" value="积分消耗规则 有效期策略" placeholder="输入关键词测试检索效果…">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-primary btn-sm">检索</button></div>
+            <div style="font-size:12px;color:var(--text-3);margin-bottom:10px">检索结果（Top 3）：</div>
+            <div class="kb-result"><div class="kb-result-path">📄 /business-rules/points-system.md · § 积分消耗规则 · 相似度 0.94</div><div class="kb-result-content">积分消耗规则：用户积分有效期为获取后 12 个月，到期自动清零。平台每月 1 日发放上月积分，积分可用于抵扣订单金额（100积分=1元），单笔订单最多抵扣 30%...</div></div>
+            <div class="kb-result"><div class="kb-result-path">📄 /business-rules/points-system.md · § 积分有效期策略 · 相似度 0.89</div><div class="kb-result-content">积分到期提醒策略：在积分到期前 7 天、3 天、1 天分别发送站内信和 Push 通知。提醒阈值：积分价值 ≥ 5 元时触发，低于阈值不打扰用户...</div></div>
+            <div class="kb-result"><div class="kb-result-path">📄 /product-specs/user-retention.md · § 复购激励策略 · 相似度 0.81</div><div class="kb-result-content">对 30 天内未复购用户，通过积分翻倍活动进行召回。历史数据显示积分翻倍可使该人群 30 日复购率提升 12-18%...</div></div>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-1);margin-bottom:12px">已索引文档</div>
+          <div class="tabs"><div class="tab active">全部 (38)</div><div class="tab">业务规则 (12)</div><div class="tab">产品规范 (15)</div><div class="tab">合规文档 (7)</div><div class="tab">其他 (4)</div></div>
+          <div class="search-bar"><input class="search-input" placeholder="搜索文档路径…"></div>
+          <div class="kb-file-item">
+            <div class="kb-file-icon">📄</div>
+            <div style="flex:1;min-width:0">
+              <div class="kb-file-path">/business-rules/points-system.md</div>
+              <div class="kb-file-meta"><span>今天 09:15</span><span>8 块</span><span>3,240 字</span></div>
+              <div class="kb-chunks"><span class="kb-chunk">§ 积分获取规则</span><span class="kb-chunk">§ 积分消耗规则</span><span class="kb-chunk">§ 积分有效期策略</span><span class="kb-chunk">§ 积分商城规范</span></div>
+            </div>
+            <div style="flex-shrink:0;display:flex;gap:6px"><button class="btn btn-ghost btn-xs">查看</button><button class="btn btn-ghost btn-xs">重建</button></div>
+          </div>
+          <div class="kb-file-item">
+            <div class="kb-file-icon">📄</div>
+            <div style="flex:1;min-width:0">
+              <div class="kb-file-path">/product-specs/user-retention.md</div>
+              <div class="kb-file-meta"><span>昨天 18:30</span><span>6 块</span><span>2,180 字</span></div>
+              <div class="kb-chunks"><span class="kb-chunk">§ 用户分层策略</span><span class="kb-chunk">§ 复购激励策略</span><span class="kb-chunk">§ 沉睡用户唤醒</span></div>
+            </div>
+            <div style="flex-shrink:0;display:flex;gap:6px"><button class="btn btn-ghost btn-xs">查看</button><button class="btn btn-ghost btn-xs">重建</button></div>
+          </div>
+          <div class="kb-file-item">
+            <div class="kb-file-icon">📄</div>
+            <div style="flex:1;min-width:0">
+              <div class="kb-file-path">/business-rules/third-party-cooperation.md</div>
+              <div class="kb-file-meta"><span>3天前</span><span>5 块</span><span>1,860 字</span></div>
+              <div class="kb-chunks"><span class="kb-chunk">§ 联名合作规范</span><span class="kb-chunk">§ 资源确认流程</span><span class="kb-chunk">§ 合作协议要求</span></div>
+            </div>
+            <div style="flex-shrink:0;display:flex;gap:6px"><button class="btn btn-ghost btn-xs">查看</button><button class="btn btn-ghost btn-xs">重建</button></div>
+          </div>
+          <div class="kb-file-item">
+            <div class="kb-file-icon">📄</div>
+            <div style="flex:1;min-width:0">
+              <div class="kb-file-path">/compliance/data-privacy.md</div>
+              <div class="kb-file-meta"><span>1周前</span><span>9 块</span><span>4,120 字</span></div>
+              <div class="kb-chunks"><span class="kb-chunk">§ 数据收集规范</span><span class="kb-chunk">§ 用户授权要求</span><span class="kb-chunk">§ 数据存储红线</span></div>
+            </div>
+            <div style="flex-shrink:0;display:flex;gap:6px"><button class="btn btn-ghost btn-xs">查看</button><button class="btn btn-ghost btn-xs">重建</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 编写方案 ===== -->
+      <div id="page-edit" class="page">
+        <div class="main">
+          <div class="section-title">编写方案</div>
+          <div class="section-sub">使用模板快速填写，或上传 PRD 文档</div>
+          <div class="editor-layout">
+            <div>
+              <div class="editor-box">
+                <div class="editor-toolbar">
+                  <button class="toolbar-btn" style="font-weight:700">B</button>
+                  <button class="toolbar-btn" style="font-style:italic">I</button>
+                  <button class="toolbar-btn"><u>U</u></button>
+                  <div class="toolbar-sep"></div>
+                  <button class="toolbar-btn">H1</button><button class="toolbar-btn">H2</button>
+                  <div class="toolbar-sep"></div>
+                  <button class="toolbar-btn">≡</button><button class="toolbar-btn">⊞</button>
+                  <div class="toolbar-sep"></div>
+                  <button class="toolbar-btn" style="color:var(--primary);font-size:11px">MD</button>
+                  <button class="toolbar-btn" style="color:var(--primary);font-size:11px">↑ 上传</button>
+                </div>
+                <div class="editor-area">
+                  <h2>一、需求背景</h2>
+                  <p>当前用户积分体系已运营 2 年，积分消耗率持续下降（当前仅 23%），用户对积分价值感知模糊，导致复购动力不足。本次改版目标是提升积分消耗率至 45%+，增强用户留存。</p>
+                  <h2>二、目标用户</h2>
+                  <p>核心：购买频次 ≥ 3 次/月的活跃用户（约 120 万）；次核心：注册 30 天内未复购用户（约 80 万）</p>
+                  <h2>三、功能设计</h2>
+                  <p>1. 积分商城升级：新增实物兑换、优惠券直兑、联名权益三类商品...</p>
+                  <p>2. 积分有效期提醒：到期前 7/3/1 天 push 通知...</p>
+                  <h2>四、数据指标</h2>
+                  <p class="placeholder">请填写核心数据指标及衡量方式...</p>
+                  <h2>五、风险评估</h2>
+                  <p class="placeholder">请填写潜在风险及应对策略...</p>
+                </div>
+              </div>
+              <div style="font-size:12px;color:var(--text-4);text-align:right;margin-top:6px">已输入 412 字 · 自动保存于 14:32</div>
+            </div>
+            <div class="side-panels">
+              <div class="panel">
+                <div class="panel-label">PRD 模板</div>
+                <div class="tpl-item">📋 标准功能模板</div>
+                <div class="tpl-item">🚀 新产品立项模板</div>
+                <div class="tpl-item">🔧 优化迭代模板</div>
+                <div class="tpl-item">💰 商业化功能模板</div>
+              </div>
+              <div class="panel">
+                <div class="panel-label">完整性检查</div>
+                <div class="check-item ok">✓ 需求背景</div>
+                <div class="check-item ok">✓ 目标用户</div>
+                <div class="check-item ok">✓ 功能设计</div>
+                <div class="check-item warn">⚠ 数据指标（未填写）</div>
+                <div class="check-item warn">⚠ 风险评估（未填写）</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-bar">
+          <div class="bottom-info">草稿已保存</div>
+          <div class="bottom-actions">
+            <button class="btn btn-ghost" onclick="navTo('list',null)">取消</button>
+            <button class="btn btn-primary" onclick="goStep('agent')">下一步：选择评审员 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 选择评审员 ===== -->
+      <div id="page-agent" class="page">
+        <div class="main">
+          <div class="section-title">选择评审员</div>
+          <div class="section-sub">可多选，多位评审员将并行从不同视角给出意见</div>
+          <div class="selected-tip">已选择：产品顾问、商业分析师 · 将从用户价值和 ROI 两个维度并行评审</div>
+          <div class="agent-grid">
+            <div class="agent-card selected" onclick="toggleAgent(this)">
+              <div class="agent-icon">🧑‍💼</div><div class="agent-name">产品顾问</div>
+              <div class="agent-tag">用户价值</div>
+              <div class="agent-desc">评审需求合理性、用户故事完整性、核心流程逻辑，识别用户体验风险</div>
+            </div>
+            <div class="agent-card" onclick="toggleAgent(this)">
+              <div class="agent-icon">🏗️</div><div class="agent-name">技术架构师</div>
+              <div class="agent-tag">可行性</div>
+              <div class="agent-desc">评估技术复杂度、依赖风险、实现路径，识别技术负债和性能隐患</div>
+            </div>
+            <div class="agent-card selected" onclick="toggleAgent(this)">
+              <div class="agent-icon">📊</div><div class="agent-name">商业分析师</div>
+              <div class="agent-tag">ROI</div>
+              <div class="agent-desc">评估市场机会、商业模式合理性、收益预测，识别商业风险</div>
+            </div>
+            <div class="agent-card" onclick="toggleAgent(this)">
+              <div class="agent-icon">🔍</div><div class="agent-name">竞品研究员</div>
+              <div class="agent-tag">差异化</div>
+              <div class="agent-desc">对比行业竞品方案，识别差异化机会，评估产品护城河</div>
+            </div>
+            <div class="agent-card" onclick="toggleAgent(this)">
+              <div class="agent-icon">🛡️</div><div class="agent-name">合规风控官</div>
+              <div class="agent-tag">安全合规</div>
+              <div class="agent-desc">检查数据安全、隐私保护、法律合规风险，识别监管红线</div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-bar">
+          <div class="bottom-info">已选 2 位评审员</div>
+          <div class="bottom-actions">
+            <button class="btn btn-ghost" onclick="goStep('edit')">← 上一步</button>
+            <button class="btn btn-primary" onclick="goStep('style')">下一步：选择风格 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 选择风格 ===== -->
+      <div id="page-style" class="page">
+        <div class="main">
+          <div class="section-title">选择评审风格</div>
+          <div class="section-sub">风格决定评审深度与态度，与评审员正交组合</div>
+          <div class="style-grid">
+            <div class="style-card" onclick="selectStyle(this)">
+              <div class="style-header"><div class="style-emoji">⚡</div><div class="style-name">宽松</div></div>
+              <div class="style-scene">小迭代 · 紧急优化 · 功能微调</div>
+              <div class="style-rule-box">仅排查 P0/P1，输出上限 5 条，优先保障评审效率。</div>
+              <div class="focus-row"><span class="focus-label">✅</span><span>核心流程 · 致命缺陷</span></div>
+              <div class="focus-row"><span class="focus-label">⏭</span><span>体验细节 · 非核心建议</span></div>
+            </div>
+            <div class="style-card" onclick="selectStyle(this)">
+              <div class="style-header"><div class="style-emoji">🎯</div><div class="style-name">务实</div></div>
+              <div class="style-scene">排期紧 · 快速试错 · 敏捷迭代</div>
+              <div class="style-rule-box">三档分类 + 整改成本标注，输出可直接作为排期输入。</div>
+              <div class="focus-row"><span class="focus-label">✅</span><span>落地可行性 · 成本收益</span></div>
+              <div class="focus-row"><span class="focus-label">⏭</span><span>理论优化 · 低优先级建议</span></div>
+            </div>
+            <div class="style-card selected" onclick="selectStyle(this)">
+              <div class="style-header"><div class="style-emoji">📋</div><div class="style-name">标准 <span class="style-default-tag">默认</span></div></div>
+              <div class="style-scene">常规立项 · 正式版本评审</div>
+              <div class="style-rule-box">全维度评审，P0/P1 必改，P2 可选，中立客观。</div>
+              <div class="focus-row"><span class="focus-label">✅</span><span>全维度完整评审</span></div>
+            </div>
+            <div class="style-card" onclick="selectStyle(this)">
+              <div class="style-header"><div class="style-emoji">🔬</div><div class="style-name">严谨</div></div>
+              <div class="style-scene">大版本 · 核心功能 · 商业化功能</div>
+              <div class="style-rule-box">全量检出，P2 升级整改项，含影响范围+出现概率，零容忍。</div>
+              <div class="focus-row"><span class="focus-label">✅</span><span>全量问题 · 隐性风险</span></div>
+            </div>
+          </div>
+          <div class="tip-bar success">
+            <span>📚</span>
+            <div><strong>业务知识库已就绪</strong> · 最后更新：今天 09:15 · 38 篇文档已索引<br><span style="font-size:12px;opacity:.8">检索范围：/business-rules/ · /product-specs/ · /compliance/</span></div>
+          </div>
+        </div>
+        <div class="bottom-bar">
+          <div class="bottom-info">标准风格 · 2 位评审员</div>
+          <div class="bottom-actions">
+            <button class="btn btn-ghost" onclick="goStep('agent')">← 上一步</button>
+            <button class="btn btn-outline" onclick="goStep('precheck')">先内审一下</button>
+            <button class="btn btn-primary" onclick="goStep('reviewing')">提交正式评审 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 内审 ===== -->
+      <div id="page-precheck" class="page">
+        <div class="main">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <div><div class="section-title">内审</div><div class="section-sub">快速检查，结果仅供参考，不归档</div></div>
+            <button class="btn btn-outline btn-sm">🔄 重新内审</button>
+          </div>
+          <div class="review-layout">
+            <div class="editor-box">
+              <div class="editor-toolbar">
+                <span style="font-size:12px;color:var(--text-3)">用户积分体系 v2.0</span>
+                <div style="margin-left:auto;font-size:11px;color:var(--text-4)">只读预览</div>
+              </div>
+              <div class="editor-area" style="min-height:360px">
+                <h2 style="background:#FFFBE6;border-radius:4px;padding:2px 6px;display:inline-block">一、需求背景</h2>
+                <p>当前积分消耗率仅 23%，目标提升至 45%+，增强用户复购。</p>
+                <h2>二、目标用户</h2>
+                <p>核心：活跃用户 120 万；次核心：未复购用户 80 万</p>
+                <h2 style="background:#FFF0F0;border-radius:4px;padding:2px 6px;display:inline-block">三、功能设计</h2>
+                <p>积分商城升级、有效期提醒、积分加速活动...</p>
+                <h2 style="background:#FFFBE6;border-radius:4px;padding:2px 6px;display:inline-block">四、数据指标</h2>
+                <p style="color:var(--danger)">⚠ 本章节内容为空</p>
+                <h2>五、风险评估</h2>
+                <p style="color:var(--warning)">⚠ 未量化风险阈值和应对方案</p>
+              </div>
+            </div>
+            <div>
+              <div class="anno-panel">
+                <div class="anno-header">
+                  <div class="anno-title"><div class="dot-live"></div>内审批注 · 产品顾问</div>
+                  <span style="font-size:11px;color:var(--text-3)">标准</span>
+                </div>
+                <div class="anno-body">
+                  <div class="rag-tip">
+                    <div class="rag-tip-title">📚 已检索到相关业务知识</div>
+                    <div class="rag-tip-item">· /business-rules/points-system.md</div>
+                    <div class="rag-tip-item">· /product-specs/user-retention.md</div>
+                  </div>
+                  <div class="anno-item p1">
+                    <div class="anno-level">P1 · 严重</div>
+                    <div class="anno-text">数据指标章节完全缺失，知识库要求必须定义「积分消耗率」「MAU 复购率」「积分商城 GMV」三项核心指标。</div>
+                  </div>
+                  <div class="anno-item p1">
+                    <div class="anno-level">P1 · 严重</div>
+                    <div class="anno-text">联名权益涉及第三方合作，知识库规范需提前 3 个月确认资源，当前未说明资源锁定状态。</div>
+                  </div>
+                  <div class="anno-item p2">
+                    <div class="anno-level">P2 · 优化</div>
+                    <div class="anno-text">双倍积分活动时间未定义，与大促节点叠加时积分成本可能超预期。</div>
+                  </div>
+                  <div style="padding:8px 0 2px;border-top:1px solid var(--border-light);font-size:12px;color:var(--text-3)">发现 2 P1 · 2 P2，建议补充后再正式提交</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-bar">
+          <div class="bottom-info">内审完成 · 2 P1 · 2 P2</div>
+          <div class="bottom-actions">
+            <button class="btn btn-ghost" onclick="goStep('style')">← 返回修改</button>
+            <button class="btn btn-primary" onclick="goStep('reviewing')">提交正式评审 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 评审中 ===== -->
+      <div id="page-reviewing" class="page">
+        <div class="main">
+          <div class="section-title">评审进行中</div>
+          <div class="section-sub">2 位评审员并行评审，请稍候…</div>
+          <div class="progress-card">
+            <div style="font-size:13px;font-weight:600;color:var(--text-1);margin-bottom:16px;display:flex;align-items:center;gap:8px"><div class="dot-live"></div>评审员进度</div>
+            <div class="prog-row">
+              <div class="prog-name">🧑‍💼 产品顾问</div>
+              <div class="prog-track"><div class="prog-fill" style="width:100%"></div></div>
+              <div class="prog-pct done">完成</div>
+            </div>
+            <div class="prog-row">
+              <div class="prog-name">📊 商业分析师</div>
+              <div class="prog-track"><div class="prog-fill" style="width:72%"></div></div>
+              <div class="prog-pct">72%</div>
+            </div>
+          </div>
+          <div class="tip-bar info" style="margin-bottom:20px">
+            <span>📚</span>
+            <div><strong>知识库检索完成</strong> · 检索到 3 篇相关文档<br>
+            <span style="font-size:12px;opacity:.85">· /business-rules/points-system.md · § 积分消耗规则<br>· /product-specs/user-retention.md · § 复购激励策略<br>· /business-rules/third-party-cooperation.md · § 联名合作规范</span></div>
+          </div>
+          <div style="text-align:center"><button class="btn btn-primary" onclick="goStep('report')" style="padding:10px 36px">查看评审报告 →</button></div>
+        </div>
+      </div>
+
+      <!-- ===== 评审报告 ===== -->
+      <div id="page-report" class="page">
+        <div class="main">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+            <div><div class="section-title">评审报告</div><div class="section-sub">用户积分体系 v2.0 · v3 · 2024-01-15 14:58</div></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-ghost btn-sm">↓ PDF</button>
+              <button class="btn btn-ghost btn-sm">↓ Word</button>
+              <button class="btn btn-outline btn-sm">分享团队</button>
+            </div>
+          </div>
+          <div class="report-layout">
+            <div class="report-sidenav">
+              <div style="font-size:10px;font-weight:700;color:var(--text-4);padding:0 12px;margin-bottom:4px;letter-spacing:.5px">目录</div>
+              <div class="report-nav-item active">评审结论</div>
+              <div class="report-nav-item">知识库来源</div>
+              <div class="report-nav-item">P0 (0)</div>
+              <div class="report-nav-item">P1 (2)</div>
+              <div class="report-nav-item">P2 (3)</div>
+              <div style="height:1px;background:var(--border);margin:8px 12px"></div>
+              <div class="report-nav-item">产品顾问</div>
+              <div class="report-nav-item">商业分析师</div>
+            </div>
+            <div>
+              <div class="conclusion-card">
+                <div class="conclusion-top">
+                  <div class="conclusion-icon">⚠️</div>
+                  <div><div class="conclusion-h">修改后通过</div><div class="conclusion-sub">发现 0 个 P0、2 个 P1、3 个 P2，请修改 P1 后重新提交</div></div>
+                </div>
+                <div class="prob-row">
+                  <div class="prob-chip p0">P0 致命 · 0</div>
+                  <div class="prob-chip p1">P1 严重 · 2</div>
+                  <div class="prob-chip p2">P2 优化 · 3</div>
+                </div>
+                <div class="level-legend"><strong style="color:var(--text-2)">级别说明</strong> · P0 致命：必须解决，无法上线 · P1 严重：影响用户体验或业务目标 · P2 优化：有改进空间，不影响上线</div>
+              </div>
+              <div class="rag-ref-card">
+                <div class="rag-ref-title">📚 本次评审参考的业务知识库</div>
+                <div class="rag-ref-file">📄 /business-rules/points-system.md · § 积分消耗规则 · § 积分有效期策略</div>
+                <div class="rag-ref-file">📄 /product-specs/user-retention.md · § 复购激励策略 · § 用户分层运营</div>
+                <div class="rag-ref-file">📄 /business-rules/third-party-cooperation.md · § 联名合作规范</div>
+              </div>
+              <div class="problem-list">
+                <div class="prob-list-hdr"><span>全部问题</span><span style="font-size:12px;color:var(--text-3);font-weight:400">共 5 条 · 产品顾问 + 商业分析师</span></div>
+                <div class="prob-item">
+                  <div class="prob-top"><span class="p-chip p1">P1 严重</span><div class="p-title">数据指标章节缺失，无法衡量改版效果</div></div>
+                  <div class="p-desc">方案第四章「数据指标」为空。知识库显示积分体系改版必须定义「积分消耗率」「MAU 复购率」「积分商城 GMV」三项核心指标，缺失将导致上线后无法评估方案价值。</div>
+                  <div class="p-suggest">💡 补充核心指标定义，至少包含目标消耗率路径、ABtest 方案及显著性标准。</div>
+                  <div class="p-footer">
+                    <div class="p-agent-tag">来源：产品顾问 · 商业分析师（共同发现）</div>
+                    <div class="p-feedback"><button class="fb-btn">👍 有用</button><button class="fb-btn">👎 没用</button></div>
+                  </div>
+                  <div class="chat-trigger" onclick="toggleChat(this)">💬 追问评审员 ›</div>
+                  <div class="chat-box">
+                    <div class="chat-msg">🤖 <strong>产品顾问</strong>：关于数据指标，建议重点定义：① 消耗率计算口径；② 与 GMV 增长的归因模型；③ 分用户层的差异化指标...</div>
+                    <div class="chat-row"><input class="chat-input" placeholder="输入追问内容…"><button class="btn btn-primary btn-sm">发送</button></div>
+                  </div>
+                </div>
+                <div class="prob-item">
+                  <div class="prob-top"><span class="p-chip p1">P1 严重</span><div class="p-title">联名权益依赖第三方合作资源未确认</div></div>
+                  <div class="p-desc">知识库规范：联名合作需提前 3 个月确认资源，方案未说明锁定状态，存在无法按时落地风险。</div>
+                  <div class="p-suggest">💡 明确联名资源锁定状态，若未确认建议调整至 v2.1 迭代。</div>
+                  <div class="p-footer">
+                    <div class="p-agent-tag">来源：商业分析师</div>
+                    <div class="p-feedback"><button class="fb-btn">👍 有用</button><button class="fb-btn">👎 没用</button></div>
+                  </div>
+                </div>
+                <div class="prob-item">
+                  <div class="prob-top"><span class="p-chip p2">P2 优化</span><div class="p-title">积分活动与大促节点冲突风险未评估</div></div>
+                  <div class="p-desc">双倍积分日若与双 11/618 叠加，积分成本可能超预期，影响毛利率。</div>
+                  <div class="p-suggest">💡 设置大促期间积分上限或活动互斥规则。</div>
+                  <div class="p-footer">
+                    <div class="p-agent-tag">来源：商业分析师</div>
+                    <div class="p-feedback"><button class="fb-btn">👍 有用</button><button class="fb-btn">👎 没用</button></div>
+                  </div>
+                </div>
+                <div class="prob-item">
+                  <div class="prob-top"><span class="p-chip p2">P2 优化</span><div class="p-title">次核心用户触达路径未描述</div></div>
+                  <div class="p-desc">80 万未复购用户的积分权益触达方式未在方案中说明，存在覆盖盲区。</div>
+                  <div class="p-suggest">💡 补充沉睡用户唤醒策略：积分到账 push、首次使用积分额外奖励等。</div>
+                  <div class="p-footer">
+                    <div class="p-agent-tag">来源：产品顾问</div>
+                    <div class="p-feedback"><button class="fb-btn">👍 有用</button><button class="fb-btn">👎 没用</button></div>
+                  </div>
+                </div>
+                <div class="prob-item">
+                  <div class="prob-top"><span class="p-chip p2">P2 优化</span><div class="p-title">到期提醒频次设计缺少体验考量</div></div>
+                  <div class="p-desc">7/3/1 天三次 push 频次较高，积分价值低时可能增加卸载率。</div>
+                  <div class="p-suggest">💡 设置提醒阈值（积分价值 ≥ 5 元），允许用户自主关闭通知。</div>
+                  <div class="p-footer">
+                    <div class="p-agent-tag">来源：产品顾问</div>
+                    <div class="p-feedback"><button class="fb-btn">👍 有用</button><button class="fb-btn">👎 没用</button></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- end page-scroll -->
+    </div><!-- end content-area -->
+  </div><!-- end app-layout -->
+</div><!-- end app -->
+
+<script>
+function showApp() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+// 侧边栏展开/收起：只改 sidebar 宽度，content-area 自动 flex:1 跟随
+function toggleCollapse() {
+  const sb = document.getElementById('sidebar');
+  const isCollapsed = sb.classList.toggle('collapsed');
+  const btn = sb.querySelector('.sb-collapse-btn');
+  btn.title = isCollapsed ? '展开菜单' : '收起菜单';
+}
+
+// 移动端侧边栏
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+
+const flowPages = ['edit','agent','style','precheck','reviewing','report'];
+const bcMap = { list:'我的方案', 'review-manage':'评审管理', 'reviewer-manage':'AI 评审员', 'style-manage':'评审风格', kb:'知识库', edit:'我的方案 › 编写方案', agent:'我的方案 › 选择评审员', style:'我的方案 › 评审风格', precheck:'我的方案 › 内审', reviewing:'我的方案 › 评审中', report:'我的方案 › 评审报告' };
+
+function navTo(name, navEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const pg = document.getElementById('page-' + name);
+  if (pg) pg.classList.add('active');
+  const isFlow = flowPages.includes(name);
+  document.getElementById('steps-wrap').style.display = isFlow ? 'block' : 'none';
+  if (isFlow) updateSteps(name);
+  document.getElementById('breadcrumb').innerHTML = '<span>' + (bcMap[name] || name) + '</span>';
+  if (navEl) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    navEl.classList.add('active');
+  } else if (['list','edit','agent','style','precheck','reviewing','report'].includes(name)) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector('.nav-item')?.classList.add('active');
+  }
+  // 关闭移动端侧边栏
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+  window.scrollTo(0, 0);
+}
+function goStep(name) { navTo(name, null); }
+
+function updateSteps(name) {
+  const ids = ['s-edit','s-agent','s-style','s-precheck','s-report'];
+  const keys = ['edit','agent','style','precheck','report'];
+  const cur = name === 'reviewing' ? 'report' : name;
+  const idx = keys.indexOf(cur);
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('active','done');
+    const num = el.querySelector('.step-num');
+    if (i < idx) { el.classList.add('done'); num.textContent = '✓'; }
+    else if (i === idx) el.classList.add('active');
+    else num.textContent = i + 1;
+  });
+}
+
+function toggleAgent(card) {
+  card.classList.toggle('selected');
+  const sel = Array.from(document.querySelectorAll('#page-agent .agent-card.selected')).map(c => c.querySelector('.agent-name').textContent.trim());
+  const tip = document.querySelector('.selected-tip');
+  tip.textContent = sel.length ? '已选择：' + sel.join('、') + ' · 将并行评审' : '请至少选择 1 位评审员';
+}
+function selectStyle(card) {
+  document.querySelectorAll('.style-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+}
+function toggleChat(trigger) {
+  const box = trigger.nextElementSibling;
+  box.classList.toggle('open');
+  trigger.textContent = box.classList.contains('open') ? '💬 收起 ∧' : '💬 追问评审员 ›';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400}
+
+spring:
+  datasource:
+    url: ${MYSQL_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_ROOT_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  ai:
+    vectorstore:
+      chroma:
+        client:
+          host: ${CHROMA_HOST:localhost}
+          port: ${CHROMA_PORT:8000}
+
+logging:
+  level:
+    root: INFO
+    com.prdreview: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

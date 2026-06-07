@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.prdreview</groupId>
+        <artifactId>prd-review-app</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>application</artifactId>
+    <name>application</name>
+    <description>应用层：用例编排、事务边界、领域事件订阅</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.prdreview</groupId>
+            <artifactId>domain</artifactId>
+        </dependency>
+        <!-- Spring 上下文 + 事务（应用层只需要这些，不需要 Web/Repository 实现） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+        <!-- BCrypt 密码加密（spring-security-crypto，不引入完整 Security） -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>ban-reverse-deps</id>
+                        <goals><goal>enforce</goal></goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>com.prdreview:api</exclude>
+                                        <exclude>com.prdreview:infrastructure</exclude>
+                                        <exclude>com.prdreview:bootstrap</exclude>
+                                    </excludes>
+                                    <message>application MUST NOT depend on api / infrastructure / bootstrap</message>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
