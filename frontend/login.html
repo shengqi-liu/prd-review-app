@@ -79,11 +79,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
 .brand-text p  { font-size: 11px; color: var(--text-3); margin-top: 3px; }
 
 /* ── 表单 ── */
-.tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
-.tab-item { flex: 1; text-align: center; padding: 8px 0; font-size: 14px; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; }
-.tab-item.active { color: var(--primary); font-weight: 600; border-bottom-color: var(--primary); }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.form-title { font-size: 15px; font-weight: 600; color: var(--text-1); margin-bottom: 20px; }
 .form-group { margin-bottom: 16px; }
 .form-label { font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; display: block; }
 .form-input { width: 100%; padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border); font-size: 13px; outline: none; transition: all .15s; color: var(--text-1); }
@@ -139,49 +135,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
       </div>
     </div>
 
-    <!-- Tab 切换 -->
-    <div class="tab-bar">
-      <div class="tab-item active" onclick="switchTab('login')">登 录</div>
-      <div class="tab-item" onclick="switchTab('register')">注 册</div>
-    </div>
-
     <!-- 登录表单 -->
-    <div id="panel-login" class="tab-panel active">
-      <div class="form-group">
-        <label class="form-label">用户名</label>
-        <input id="login-username" class="form-input" type="text" placeholder="请输入用户名" autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label class="form-label">密码</label>
-        <input id="login-password" class="form-input" type="password" placeholder="请输入密码" autocomplete="current-password">
-      </div>
-      <div id="login-err" class="err-msg"></div>
-      <button class="submit-btn" id="login-btn" onclick="doLogin()">
-        <div class="spinner" id="login-spinner"></div>
-        <span class="btn-text">登 录</span>
-      </button>
+    <p class="form-title">账号登录</p>
+    <div class="form-group">
+      <label class="form-label">用户名</label>
+      <input id="login-username" class="form-input" type="text" placeholder="请输入用户名" autocomplete="username">
     </div>
-
-    <!-- 注册表单 -->
-    <div id="panel-register" class="tab-panel">
-      <div class="form-group">
-        <label class="form-label">用户名</label>
-        <input id="reg-username" class="form-input" type="text" placeholder="2-32 个字符">
-      </div>
-      <div class="form-group">
-        <label class="form-label">邮箱</label>
-        <input id="reg-email" class="form-input" type="email" placeholder="example@company.com">
-      </div>
-      <div class="form-group">
-        <label class="form-label">密码</label>
-        <input id="reg-password" class="form-input" type="password" placeholder="至少 8 位">
-      </div>
-      <div id="reg-err" class="err-msg"></div>
-      <button class="submit-btn" id="reg-btn" onclick="doRegister()">
-        <div class="spinner" id="reg-spinner"></div>
-        <span class="btn-text">注 册</span>
-      </button>
+    <div class="form-group">
+      <label class="form-label">密码</label>
+      <input id="login-password" class="form-input" type="password" placeholder="请输入密码" autocomplete="current-password">
     </div>
+    <div id="login-err" class="err-msg"></div>
+    <button class="submit-btn" id="login-btn" onclick="doLogin()">
+      <div class="spinner" id="login-spinner"></div>
+      <span class="btn-text">登 录</span>
+    </button>
 
     <div class="login-footer">© 2025 AI Review System · 产品团队内部使用</div>
   </div>
@@ -192,31 +160,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
 // 已登录则直接跳主应用
 if (getToken()) window.location.replace('app.html');
 
-function switchTab(tab) {
-  document.querySelectorAll('.tab-item').forEach((el, i) =>
-    el.classList.toggle('active', (i === 0) === (tab === 'login')));
-  document.getElementById('panel-login').classList.toggle('active', tab === 'login');
-  document.getElementById('panel-register').classList.toggle('active', tab === 'register');
-  clearErrors();
-}
-
-function clearErrors() {
-  document.getElementById('login-err').textContent = '';
-  document.getElementById('reg-err').textContent = '';
-  document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
-}
-
-function setLoading(btnId, spinnerId, loading) {
-  const btn = document.getElementById(btnId);
+function setLoading(loading) {
+  const btn = document.getElementById('login-btn');
   btn.disabled = loading;
   btn.classList.toggle('loading', loading);
-  document.getElementById(spinnerId).style.display = loading ? 'block' : 'none';
+  document.getElementById('login-spinner').style.display = loading ? 'block' : 'none';
 }
 
 async function doLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
-  const errEl = document.getElementById('login-err');
+  const errEl    = document.getElementById('login-err');
+
+  document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
+  errEl.textContent = '';
 
   if (!username) {
     document.getElementById('login-username').classList.add('error');
@@ -227,69 +184,24 @@ async function doLogin() {
     errEl.textContent = '请输入密码'; return;
   }
 
-  setLoading('login-btn', 'login-spinner', true);
-  errEl.textContent = '';
-
+  setLoading(true);
   try {
     const data = await login(username, password);
-
-    // 拉取用户信息（临时从 token payload 解析，后续可加 /api/v1/users/me 接口）
+    // 从 JWT payload 解析用户基础信息
     const payload = JSON.parse(atob(data.accessToken.split('.')[1]));
-    const user = { id: payload.userId, username: payload.username, role: payload.role };
-
-    saveAuth(data.accessToken, user);
+    saveAuth(data.accessToken, { id: payload.userId, username: payload.username, role: payload.role });
     window.location.href = 'app.html';
   } catch (e) {
     errEl.textContent = e.message || '登录失败，请稍后重试';
     document.getElementById('login-username').classList.add('error');
     document.getElementById('login-password').classList.add('error');
   } finally {
-    setLoading('login-btn', 'login-spinner', false);
-  }
-}
-
-async function doRegister() {
-  const username = document.getElementById('reg-username').value.trim();
-  const email    = document.getElementById('reg-email').value.trim();
-  const password = document.getElementById('reg-password').value;
-  const errEl    = document.getElementById('reg-err');
-
-  if (!username || username.length < 2) {
-    document.getElementById('reg-username').classList.add('error');
-    errEl.textContent = '用户名至少 2 个字符'; return;
-  }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    document.getElementById('reg-email').classList.add('error');
-    errEl.textContent = '请输入有效邮箱'; return;
-  }
-  if (!password || password.length < 8) {
-    document.getElementById('reg-password').classList.add('error');
-    errEl.textContent = '密码至少 8 位'; return;
-  }
-
-  setLoading('reg-btn', 'reg-spinner', true);
-  errEl.textContent = '';
-
-  try {
-    await register(username, email, password);
-    // 注册成功后自动登录
-    const data = await login(username, password);
-    const payload = JSON.parse(atob(data.accessToken.split('.')[1]));
-    saveAuth(data.accessToken, { id: payload.userId, username: payload.username, role: payload.role });
-    window.location.href = 'app.html';
-  } catch (e) {
-    errEl.textContent = e.message || '注册失败，请稍后重试';
-  } finally {
-    setLoading('reg-btn', 'reg-spinner', false);
+    setLoading(false);
   }
 }
 
 // Enter 键提交
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  if (document.getElementById('panel-login').classList.contains('active')) doLogin();
-  else doRegister();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 </script>
 </body>
 </html>

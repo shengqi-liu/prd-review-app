@@ -81,14 +81,3 @@ async function login(username, password) {
   return json.data; // { accessToken, tokenType, expiresIn }
 }
 
-/** 注册接口 */
-async function register(username, email, password) {
-  const resp = await fetch(`${API_BASE}/api/v1/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email, password }),
-  });
-  const json = await resp.json();
-  if (json.code !== 0) throw new Error(json.message || '注册失败');
-  return json.data;
-}
