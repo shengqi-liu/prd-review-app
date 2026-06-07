@@ -1,5 +1,6 @@
 package com.prdreview.bootstrap.config;
 
+import com.prdreview.common.security.AccessDeniedExceptionHandler;
 import com.prdreview.common.security.JwtAuthenticationFilter;
 import com.prdreview.common.security.SecurityAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SecurityAuthenticationEntryPoint authenticationEntryPoint;
+    private final AccessDeniedExceptionHandler accessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -49,8 +51,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(WHITE_LIST).permitAll()
                 .anyRequest().authenticated())
-            .exceptionHandling(ex ->
-                ex.authenticationEntryPoint(authenticationEntryPoint))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler))
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
