@@ -25,6 +25,19 @@ springdoc:
     path: /swagger-ui/index.html
     try-it-out-enabled: true
 
+ai:
+  fetch:
+    timeout-connect-ms: 5000
+    timeout-read-ms: 15000
+    user-agent: PrdReview-Bot/1.0
+
+kb:
+  git:
+    poll-interval-ms: 3600000
+    poll-initial-delay-ms: 60000
+    clone-base-dir: ./kb-data
+    clone-timeout-ms: 300000
+
 management:
   endpoints:
     web:

@@ -47,6 +47,7 @@ public enum ErrorCode {
     PRD_CONTENT_TOO_SHORT(30002, "PRD 内容过短，请补充后再提交"),
     PRD_MISSING_REQUIRED_SECTION(30003, "PRD 缺少必要章节（背景/目标/功能设计）"),
     PRD_VERSION_CONFLICT(30004, "PRD 版本冲突，请刷新后重试"),
+    PRD_OPERATION_NOT_ALLOWED(30005, "当前状态不允许该操作"),
 
     // ── 评审域 40000–49999 ───────────────────────────────
     REVIEW_NOT_FOUND(40001, "评审记录不存在"),
@@ -58,11 +59,18 @@ public enum ErrorCode {
     KB_INDEX_FAILED(50001, "知识库索引失败"),
     KB_RETRIEVAL_FAILED(50002, "知识库检索失败"),
     KB_GIT_REPO_NOT_FOUND(50003, "Git 知识库路径不存在"),
+    KB_GIT_CLONE_FAILED(50004, "Git 仓库 clone 失败"),
+    KB_GIT_PULL_FAILED(50005, "Git 仓库拉取失败"),
+    KB_GIT_AUTH_FAILED(50006, "Git 凭据无效或被拒绝"),
+    KB_REPO_ALREADY_CONFIGURED(50007, "知识库仓库已配置（系统至多 1 个）"),
 
     // ── Reviewer / Style 域 60000–69999 ─────────────────
     REVIEWER_NOT_FOUND(60001, "AI 评审员不存在"),
     REVIEWER_PROMPT_INVALID(60002, "评审员 Prompt 模板不合法"),
     STYLE_NOT_FOUND(60003, "评审风格不存在"),
+    STYLE_DEFAULT_NOT_DELETABLE(60004, "默认风格不可删除"),
+    STYLE_RULE_INVALID(60005, "评审风格规则配置非法"),
+    STYLE_DEFAULT_NOT_DISABLABLE(60006, "默认风格不可禁用"),
 
     // ── 系统级错误 90000–99999 ───────────────────────────
     SYSTEM_ERROR(99999, "系统内部错误，请稍后重试"),

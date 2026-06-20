@@ -10,6 +10,12 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   ai:
+    openai:
+      api-key: ${DEEPSEEK_API_KEY}
+      base-url: ${OPENAI_BASE_URL:https://api.deepseek.com}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:deepseek-chat}
     vectorstore:
       chroma:
         client:

@@ -50,6 +50,11 @@ public class GlobalResponseAdvice implements ResponseBodyAdvice<Object> {
                                   ServerHttpResponse response) {
         String path = request.getURI().getPath();
 
+        // 仅包装 /api/ 路径下的业务响应
+        if (!path.startsWith("/api/")) {
+            return body;
+        }
+
         // 跳过非业务路径
         for (String prefix : SKIP_PREFIXES) {
             if (path.startsWith(prefix)) {

@@ -16,11 +16,14 @@ public class MetaObjectHandlerConfig implements MetaObjectHandler {
 
     @Override
     public void insertFill(MetaObject metaObject) {
-        this.strictInsertFill(metaObject, "createdAt", LocalDateTime.class, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        this.strictInsertFill(metaObject, "createdAt", LocalDateTime.class, now);
+        // updated_at 列 NOT NULL，插入时 MyBatis-Plus 会显式带 NULL，绕过 DB 默认值，故此处一并填充
+        this.strictInsertFill(metaObject, "updatedAt", LocalDateTime.class, now);
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
-        // 当前无需更新时自动填充
+        this.strictUpdateFill(metaObject, "updatedAt", LocalDateTime.class, LocalDateTime.now());
     }
 }

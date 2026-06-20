@@ -1,5 +1,7 @@
 package com.prdreview.common.web;
 
+import com.prdreview.common.exception.AiServiceException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import com.prdreview.common.exception.BizException;
 import com.prdreview.common.exception.ErrorCode;
 import jakarta.validation.ConstraintViolationException;
@@ -7,9 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * 全局异常处理器。
@@ -24,6 +29,24 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /** 静态资源未找到：返回 404，不走业务兜底（避免 favicon.ico 等触发 500） */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResourceFound(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public Result<Void> handleOptimisticLockingFailure(OptimisticLockingFailureException ex) {
+        log.warn("[OptimisticLockingFailure] 数据版本冲突");
+        return Result.error(ErrorCode.PRD_VERSION_CONFLICT, "数据已被修改，请刷新后重试");
+    }
+
+    @ExceptionHandler(AiServiceException.class)
+    public Result<Void> handleAiServiceException(AiServiceException ex) {
+        log.warn("[AiServiceException] {}", ex.getMessage());
+        return Result.error(ErrorCode.AI_SERVICE_ERROR, ex.getMessage());
+    }
 
     /** 业务异常：HTTP 200，返回对应错误码 */
     @ExceptionHandler(BizException.class)
