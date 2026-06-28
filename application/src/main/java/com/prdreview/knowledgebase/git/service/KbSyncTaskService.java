@@ -64,8 +64,9 @@ public class KbSyncTaskService {
             return;
         }
         // 标记 SYNCING 并立即持久化（让前端能看到状态）
+        // 注意：update 返回带新 version 的 domain，必须接收，否则后续 markError/markHealthy 的 update 会因乐观锁冲突 0 行静默失败
         repo.markSyncing();
-        repository.update(repo);
+        repo = repository.update(repo);
 
         String oldCommit = repo.getLastSyncedCommit();
         try {

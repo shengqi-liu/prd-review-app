@@ -2,10 +2,12 @@ package com.prdreview.knowledgebase.git.jgit;
 
 import com.prdreview.common.exception.BizException;
 import com.prdreview.common.exception.ErrorCode;
+import com.prdreview.knowledgebase.git.KbGitProperties;
 import com.prdreview.knowledgebase.git.model.AuthType;
 import com.prdreview.knowledgebase.git.model.ChangeType;
 import com.prdreview.knowledgebase.git.model.MarkdownChange;
 import com.prdreview.knowledgebase.git.service.GitWatcher;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ResetCommand;
@@ -44,9 +46,17 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class GitOperations implements GitWatcher {
 
     private static final String MD_SUFFIX = ".md";
+
+    private final KbGitProperties properties;
+
+    /** ms → seconds，最小 1 秒（防止 setTimeout(0) 被 JGit 视为无超时）。 */
+    private static int toJGitTimeoutSeconds(long timeoutMs) {
+        return (int) Math.max(1, timeoutMs / 1000);
+    }
 
     /**
      * 首次 clone 仓库到本地路径，返回 HEAD commit hash。
@@ -65,7 +75,8 @@ public class GitOperations implements GitWatcher {
                 Git.cloneRepository()
                     .setURI(remoteUrl)
                     .setBranch(branch)
-                    .setDirectory(dir),
+                    .setDirectory(dir)
+                    .setTimeout(toJGitTimeoutSeconds(properties.getCloneTimeoutMs())),
                 authType, authSecret).call()) {
                 ObjectId head = git.getRepository().resolve("HEAD");
                 if (head == null) {
@@ -98,7 +109,11 @@ public class GitOperations implements GitWatcher {
         }
         log.info("[KB-Git] fetch+reset start path={} branch={}", localPath, branch);
         try (Git git = Git.open(dir)) {
-            CredentialFactory.configure(git.fetch().setRemoveDeletedRefs(true), authType, authSecret).call();
+            CredentialFactory.configure(
+                git.fetch()
+                    .setRemoveDeletedRefs(true)
+                    .setTimeout(toJGitTimeoutSeconds(properties.getFetchTimeoutMs())),
+                authType, authSecret).call();
             // reset --hard origin/<branch>
             git.reset()
                 .setMode(ResetCommand.ResetType.HARD)

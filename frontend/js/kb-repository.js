@@ -65,8 +65,10 @@ async function loadKbStatus() {
     currentKbRepo = list[0] || null;
     if (container) renderKbStatus();
     if (syncBtn) {
-      syncBtn.disabled = !currentKbRepo || !admin;
+      const isSyncing = currentKbRepo && currentKbRepo.syncStatus === 'SYNCING';
+      syncBtn.disabled = !currentKbRepo || !admin || isSyncing;
       syncBtn.style.display = admin ? '' : 'none';
+      syncBtn.classList.toggle('is-spinning', isSyncing);
     }
     updateTopbarKbButtons();
   } catch (e) {

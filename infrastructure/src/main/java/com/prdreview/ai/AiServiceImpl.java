@@ -27,13 +27,16 @@ public class AiServiceImpl implements AiService {
 
     private final ChatClient chatClient;
     private final DocumentFetcher documentFetcher;
+    private final DocumentParser documentParser;
     private final ObjectMapper objectMapper;
 
     public AiServiceImpl(ChatClient.Builder chatClientBuilder,
                          DocumentFetcher documentFetcher,
+                         DocumentParser documentParser,
                          ObjectMapper objectMapper) {
         this.chatClient = chatClientBuilder.build();
         this.documentFetcher = documentFetcher;
+        this.documentParser = documentParser;
         this.objectMapper = objectMapper;
     }
 
@@ -43,6 +46,16 @@ public class AiServiceImpl implements AiService {
         String rawText = documentFetcher.fetchContent(url);
         SummarizeResult result = summarizeText(rawText);
         log.info("[AI] summarizeFromUrl 完成 url={} title={}", url, result.title());
+        return result;
+    }
+
+    @Override
+    public SummarizeResult summarizeFromFile(byte[] bytes, String filename) {
+        log.info("[AI] summarizeFromFile filename={} bytes={}", filename, bytes == null ? 0 : bytes.length);
+        // DocumentParser 已处理 MIME 白名单 + 解析失败 + 文本过短的所有异常
+        String rawText = documentParser.parseText(bytes, filename);
+        SummarizeResult result = summarizeText(rawText);
+        log.info("[AI] summarizeFromFile 完成 filename={} title={}", filename, result.title());
         return result;
     }
 

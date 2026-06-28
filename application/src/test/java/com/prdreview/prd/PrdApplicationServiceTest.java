@@ -61,6 +61,25 @@ class PrdApplicationServiceTest {
             PrdStatus.INITIALIZING, 1, LocalDateTime.now(), LocalDateTime.now());
     }
 
+    /** 一份"够格"的 PRD：title ≥5 + content ≥200 有效字符 + 含两章节，专为 submit 测试用。 */
+    private Prd submittablePrd(Long id, Long authorId) {
+        String content = """
+            # 背景
+            本项目为产品评审团队提供 AI 辅助评审能力，让 PM 提交 PRD 后能在数十秒内获得多角色评审反馈，
+            显著缩短评审周期。当前手工评审平均耗时 3 天，本平台希望通过多 Agent 并行评审解决该痛点。
+            预期受益方包括产品经理、设计师、技术 Lead、合规审查官。系统目标用户规模约 200 人，
+            单日峰值评审请求 50 次。需要在保持准确性的前提下覆盖多评审视角，提供可量化的评审输出。
+
+            # 目标
+            - 评审平均耗时降至 5 分钟以内（含 AI 调用、报告生成、用户阅读）
+            - 评审维度覆盖产品视角/技术视角/商业视角/合规视角
+            - 评审报告含明确分级问题清单（严重/重要/建议）和改进建议
+            - 用户对评审有用度的反馈率 ≥ 60%
+            """;
+        return Prd.reconstruct(id, "会员订阅功能 v1", content, "https://example.com/doc",
+            authorId, PrdStatus.DRAFT, 1, LocalDateTime.now(), LocalDateTime.now());
+    }
+
     private Prd submittedPrd(Long id, Long authorId) {
         return Prd.reconstruct(id, "标题", "内容", null, authorId,
             PrdStatus.SUBMITTED, 2, LocalDateTime.now(), LocalDateTime.now());
@@ -224,11 +243,9 @@ class PrdApplicationServiceTest {
     // ── 7.7 submitPrd ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("submitPrd — 成功提交，创建版本快照（含 sourceUrl）")
+    @DisplayName("submitPrd — 成功提交（合法 PRD），创建版本快照（含 sourceUrl）")
     void submitPrd_success_withSnapshot() {
-        Prd prdWithUrl = Prd.reconstruct(1L, "标题", "内容", "https://example.com/doc",
-            10L, PrdStatus.DRAFT, 1, LocalDateTime.now(), LocalDateTime.now());
-        when(prdRepository.findById(1L)).thenReturn(prdWithUrl);
+        when(prdRepository.findById(1L)).thenReturn(submittablePrd(1L, 10L));
 
         PrdDTO dto = prdService.submitPrd(1L, 10L);
         assertThat(dto.status()).isEqualTo("SUBMITTED");
@@ -237,7 +254,7 @@ class PrdApplicationServiceTest {
     }
 
     @Test
-    @DisplayName("submitPrd — INITIALIZING 状态不可提交")
+    @DisplayName("submitPrd — INITIALIZING 状态不可提交（状态优先于内容门槛）")
     void submitPrd_initializing_throws() {
         when(prdRepository.findById(1L)).thenReturn(initializingPrd(1L, 10L));
         assertThatThrownBy(() -> prdService.submitPrd(1L, 10L))
@@ -252,6 +269,58 @@ class PrdApplicationServiceTest {
         assertThatThrownBy(() -> prdService.submitPrd(1L, 99L))
             .isInstanceOf(BizException.class)
             .satisfies(e -> assertThat(((BizException) e).getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
+    }
+
+    @Test
+    @DisplayName("submitPrd — title 太短抛 PRD_CONTENT_TOO_SHORT，状态保持 DRAFT")
+    void submitPrd_titleTooShort_throwsContentTooShort() {
+        // draftPrd 用 title="标题"(2 字符) + content="内容"(2 字符) → 都不达标，但 title 先报
+        when(prdRepository.findById(1L)).thenReturn(draftPrd(1L, 10L));
+        assertThatThrownBy(() -> prdService.submitPrd(1L, 10L))
+            .isInstanceOf(BizException.class)
+            .satisfies(e -> {
+                BizException be = (BizException) e;
+                assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PRD_CONTENT_TOO_SHORT);
+                assertThat(be.getMessage()).contains("title");
+            });
+        // 状态保持 DRAFT，无 update 或快照
+        verify(prdRepository, never()).update(any());
+        verify(prdVersionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("submitPrd — content 太短抛 PRD_CONTENT_TOO_SHORT")
+    void submitPrd_contentTooShort_throwsContentTooShort() {
+        // title 够长但 content 短
+        Prd prd = Prd.reconstruct(1L, "会员订阅功能 v1", "内容太短了哦",
+            null, 10L, PrdStatus.DRAFT, 1, LocalDateTime.now(), LocalDateTime.now());
+        when(prdRepository.findById(1L)).thenReturn(prd);
+        assertThatThrownBy(() -> prdService.submitPrd(1L, 10L))
+            .isInstanceOf(BizException.class)
+            .satisfies(e -> {
+                BizException be = (BizException) e;
+                assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PRD_CONTENT_TOO_SHORT);
+                assertThat(be.getMessage()).contains("content");
+            });
+        verify(prdRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("submitPrd — 缺必要章节抛 PRD_MISSING_REQUIRED_SECTION，消息含缺失项")
+    void submitPrd_missingSections_throwsMissingSection() {
+        // 字数够,但只有 "# 背景" 一个核心章节
+        String content = "# 背景\n" + "x".repeat(220);
+        Prd prd = Prd.reconstruct(1L, "会员订阅功能 v1", content,
+            null, 10L, PrdStatus.DRAFT, 1, LocalDateTime.now(), LocalDateTime.now());
+        when(prdRepository.findById(1L)).thenReturn(prd);
+        assertThatThrownBy(() -> prdService.submitPrd(1L, 10L))
+            .isInstanceOf(BizException.class)
+            .satisfies(e -> {
+                BizException be = (BizException) e;
+                assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PRD_MISSING_REQUIRED_SECTION);
+                assertThat(be.getMessage()).contains("目标").contains("功能设计");
+            });
+        verify(prdRepository, never()).update(any());
     }
 
     // ── 7.8 listPrds ─────────────────────────────────────────────────
@@ -290,5 +359,67 @@ class PrdApplicationServiceTest {
         prdService.listPrds(new PrdQueryCommand(1, 20, 10L, "SUBMITTER"));
         // 验证 excludeInitializing=true
         verify(prdRepository).findPageByCondition(1, 20, 10L, true);
+    }
+
+    // ──────────────────────────────────────────────────
+    // #7 createFromFile — 4 个场景
+    // ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("createFromFile — 成功:调 AI 摘要 + 落 DRAFT + sourceUrl 为 null")
+    void createFromFile_success() {
+        byte[] bytes = "fake pdf bytes content for parsing".getBytes();
+        com.prdreview.ai.dto.SummarizeResult summarized =
+            new com.prdreview.ai.dto.SummarizeResult("AI 摘要标题", "AI 摘要正文内容");
+        when(aiService.summarizeFromFile(bytes, "test.pdf")).thenReturn(summarized);
+        when(prdRepository.save(any())).thenAnswer(inv -> {
+            Prd in = inv.getArgument(0);
+            return Prd.reconstruct(99L, in.getTitle(), in.getContent(), in.getSourceUrl(),
+                in.getAuthorId(), in.getStatus(), 1, LocalDateTime.now(), LocalDateTime.now());
+        });
+
+        PrdDTO dto = prdService.createFromFile(
+            new com.prdreview.prd.CreatePrdFromFileCommand(bytes, "test.pdf", 10L));
+
+        assertThat(dto.id()).isEqualTo(99L);
+        assertThat(dto.title()).isEqualTo("AI 摘要标题");
+        assertThat(dto.content()).isEqualTo("AI 摘要正文内容");
+        assertThat(dto.status()).isEqualTo("DRAFT");  // 直接 DRAFT,不走 INITIALIZING
+        assertThat(dto.sourceUrl()).isNull();          // 与 URL 路径区分
+        verify(aiService).summarizeFromFile(bytes, "test.pdf");
+    }
+
+    @Test
+    @DisplayName("createFromFile — 空 byte[] 抛 PARAM_INVALID,不调 AI")
+    void createFromFile_emptyBytes() {
+        assertThatThrownBy(() -> prdService.createFromFile(
+            new com.prdreview.prd.CreatePrdFromFileCommand(new byte[0], "x.pdf", 10L)))
+            .isInstanceOf(BizException.class)
+            .satisfies(e -> assertThat(((BizException) e).getErrorCode()).isEqualTo(ErrorCode.PARAM_INVALID));
+        verify(aiService, never()).summarizeFromFile(any(), any());
+    }
+
+    @Test
+    @DisplayName("createFromFile — > 10MB 抛 PRD_FILE_TOO_LARGE,不调 AI(service 层兜底)")
+    void createFromFile_tooLarge() {
+        byte[] huge = new byte[10 * 1024 * 1024 + 1];  // 10MB + 1 byte
+        assertThatThrownBy(() -> prdService.createFromFile(
+            new com.prdreview.prd.CreatePrdFromFileCommand(huge, "big.pdf", 10L)))
+            .isInstanceOf(BizException.class)
+            .satisfies(e -> assertThat(((BizException) e).getErrorCode()).isEqualTo(ErrorCode.PRD_FILE_TOO_LARGE));
+        verify(aiService, never()).summarizeFromFile(any(), any());
+    }
+
+    @Test
+    @DisplayName("createFromFile — AiService 抛 BizException 直接向上传播,不保存 PRD")
+    void createFromFile_aiServiceFails() {
+        byte[] bytes = "fake".getBytes();
+        BizException parseErr = new BizException(ErrorCode.PRD_FILE_PARSE_FAILED, "解析失败");
+        when(aiService.summarizeFromFile(bytes, "scan.pdf")).thenThrow(parseErr);
+
+        assertThatThrownBy(() -> prdService.createFromFile(
+            new com.prdreview.prd.CreatePrdFromFileCommand(bytes, "scan.pdf", 10L)))
+            .isSameAs(parseErr);
+        verify(prdRepository, never()).save(any());
     }
 }

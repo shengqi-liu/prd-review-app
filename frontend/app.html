@@ -306,6 +306,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
 
 /* 按钮 — ArcoDesign Button */
 .btn { padding: 5px 15px; border-radius: var(--radius); font-size: 13px; font-weight: 400; cursor: pointer; border: 1px solid transparent; transition: all .15s; display: inline-flex; align-items: center; gap: 5px; line-height: 1.6; white-space: nowrap; }
+.btn-svg { flex-shrink: 0; }
+.btn-icon.is-spinning .btn-svg { animation: btnSpin 1s linear infinite; }
+@keyframes btnSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
 .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
 .btn-outline { background: #fff; color: var(--primary); border-color: var(--primary); }
@@ -415,7 +418,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
 .check-item.ok { color: var(--success); }
 .check-item.warn { color: var(--warning); }
 
-/* 内审 */
+/* 提交评审 */
 .review-layout { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; }
 .anno-panel { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; }
 .anno-header { padding: 12px 16px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; background: #FAFBFC; }
@@ -662,12 +665,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
         <div class="nav-item active" data-tip="我的方案" onclick="navTo('list',this)">
           <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v3H9z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4.5"/></svg></span>
           <span class="nav-label">我的方案</span>
-          <span class="nav-badge blue">6</span>
-        </div>
-        <div class="nav-item" data-tip="评审管理" onclick="navTo('review-manage',this)">
-          <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></span>
-          <span class="nav-label">评审管理</span>
-          <span class="nav-badge">2</span>
+          <span class="nav-badge blue" id="nav-badge-prd" style="display:none">0</span>
         </div>
       </div>
 
@@ -711,17 +709,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
       <div id="steps-wrap" style="display:none">
         <div class="steps-wrap">
           <div class="steps">
-            <div class="step done" onclick="navTo('list',null)"><div class="step-num">✓</div> 方案列表</div>
+            <div class="step" id="step-edit"><div class="step-num">1</div> 编写方案</div>
             <div class="step-arrow">›</div>
-            <div class="step" id="s-edit"><div class="step-num">1</div> 编写方案</div>
+            <div class="step" id="step-agent"><div class="step-num">2</div> 选评审员</div>
             <div class="step-arrow">›</div>
-            <div class="step" id="s-agent"><div class="step-num">2</div> 评审员</div>
+            <div class="step" id="step-style"><div class="step-num">3</div> 定评审风格</div>
             <div class="step-arrow">›</div>
-            <div class="step" id="s-style"><div class="step-num">3</div> 风格</div>
-            <div class="step-arrow">›</div>
-            <div class="step" id="s-precheck"><div class="step-num">4</div> 内审</div>
-            <div class="step-arrow">›</div>
-            <div class="step" id="s-report"><div class="step-num">5</div> 报告</div>
+            <div class="step" id="step-precheck"><div class="step-num">4</div> 提交评审</div>
           </div>
         </div>
       </div>
@@ -734,49 +728,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
         <div class="main">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
             <div><div class="section-title">我的方案</div><div class="section-sub">管理和追踪所有 PRD 评审</div></div>
-            <button class="btn btn-primary" onclick="goStep('edit')">＋ 新建方案</button>
+            <button class="btn btn-primary" onclick="goCreatePrd()">＋ 新建方案</button>
           </div>
-          <div class="stat-grid">
-            <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">全部方案</div></div>
-            <div class="stat-card"><div class="stat-num" style="color:var(--success)">3</div><div class="stat-label">已通过</div><div class="stat-trend">↑ 本月 +2</div></div>
-            <div class="stat-card"><div class="stat-num" style="color:var(--warning)">1</div><div class="stat-label">待修改</div></div>
-            <div class="stat-card"><div class="stat-num" style="color:var(--primary)">2</div><div class="stat-label">评审中</div></div>
-          </div>
-          <div class="tabs">
-            <div class="tab active">全部 (6)</div><div class="tab">待评审 (1)</div>
-            <div class="tab">已通过 (3)</div><div class="tab">需修改 (1)</div><div class="tab">未通过 (1)</div>
-          </div>
-          <div class="search-bar">
-            <input class="search-input" placeholder="🔍 搜索方案名称…">
-            <select class="filter-select"><option>全部评审员</option><option>产品顾问</option><option>技术架构师</option></select>
-            <select class="filter-select"><option>全部风格</option><option>标准</option><option>严谨</option></select>
-          </div>
-          <div class="prd-list">
-            <div class="prd-item" onclick="goStep('report')">
-              <div><div class="prd-title">用户积分体系 v2.0 改版方案</div><div class="prd-meta"><span>2024-01-15</span><span>产品顾问 · 商业分析师</span><span>标准</span></div></div>
-              <div class="prd-right"><span class="badge badge-fix">修改后通过</span><span style="color:var(--text-4);font-size:16px">›</span></div>
-            </div>
-            <div class="prd-item">
-              <div><div class="prd-title">商品详情页 AI 推荐功能</div><div class="prd-meta"><span>2024-01-14</span><span>产品顾问 · 技术架构师 · 商业分析师</span><span>严谨</span></div></div>
-              <div class="prd-right"><span class="badge badge-pass">PRD 通过</span><span style="color:var(--text-4);font-size:16px">›</span></div>
-            </div>
-            <div class="prd-item" onclick="goStep('edit')">
-              <div><div class="prd-title">搜索结果页筛选优化</div><div class="prd-meta"><span>2024-01-13</span><span>草稿</span></div></div>
-              <div class="prd-right"><span class="badge badge-draft">草稿</span><span style="color:var(--text-4);font-size:16px">›</span></div>
-            </div>
-            <div class="prd-item">
-              <div><div class="prd-title">会员付费订阅功能方案</div><div class="prd-meta"><span>2024-01-12</span><span>评审中 · 4 个评审员</span></div></div>
-              <div class="prd-right"><span class="badge badge-reviewing">评审中</span><span style="color:var(--text-4);font-size:16px">›</span></div>
-            </div>
-            <div class="prd-item">
-              <div><div class="prd-title">新用户引导流程重设计</div><div class="prd-meta"><span>2024-01-10</span><span>产品顾问</span><span>宽松</span></div></div>
-              <div class="prd-right"><span class="badge badge-pass">PRD 通过</span><span style="color:var(--text-4);font-size:16px">›</span></div>
-            </div>
-            <div class="prd-item">
-              <div><div class="prd-title">订单退款流程优化方案</div><div class="prd-meta"><span>2024-01-08</span><span>合规风控官 · 产品顾问</span><span>严谨</span></div></div>
-              <div class="prd-right"><span class="badge badge-fail">不通过</span><span style="color:var(--text-4);font-size:16px">›</span></div>
-            </div>
-          </div>
+          <div class="stat-grid" id="prd-stats"></div>
+          <div class="prd-list" id="prd-list-container"></div>
         </div>
       </div>
 
@@ -837,8 +792,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
             <div><div class="section-title">知识库</div><div class="section-sub">本地 Git 仓库 · Markdown 自动索引 · 语义检索</div></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-primary btn-sm" id="kb-sync-btn" onclick="triggerKbSync()" style="display:none">🔄 立即同步</button>
-              <button class="btn btn-outline btn-sm" id="kb-config-btn" onclick="openKbConfigModal(false)" style="display:none">⚙ 配置仓库</button>
+              <button class="btn btn-primary btn-sm btn-icon" id="kb-sync-btn" onclick="triggerKbSync()" style="display:none">
+                <svg class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                <span>立即同步</span>
+              </button>
+              <button class="btn btn-outline btn-sm btn-icon" id="kb-config-btn" onclick="openKbConfigModal(false)" style="display:none">
+                <svg class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span>配置仓库</span>
+              </button>
             </div>
           </div>
           <div id="kb-repo-status" style="margin-top:8px"></div>
@@ -851,219 +819,160 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
       <!-- ===== 编写方案 ===== -->
       <div id="page-edit" class="page">
         <div class="main">
-          <div class="section-title">编写方案</div>
-          <div class="section-sub">使用模板快速填写，或上传 PRD 文档</div>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <div>
+              <div class="section-title">编写方案</div>
+              <div class="section-sub">使用模板快速填写，或上传 PRD 文档</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <button class="btn btn-outline btn-sm" onclick="openImportFromUrl()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                </svg>
+                <span>从 URL 导入</span>
+              </button>
+              <div>
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('prd-upload-input').click()">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                  </svg>
+                  <span>上传文档</span>
+                </button>
+                <input type="file" id="prd-upload-input" accept=".pdf,.docx,.doc,.txt,.md" style="display:none" onchange="uploadPrdFile(this.files[0])">
+                <div style="font-size:11px;color:var(--text-4);margin-top:4px;text-align:right">PDF/Word/MD/TXT · ≤10MB</div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="prd-edit-id" value="">
+          <input type="hidden" id="prd-edit-version" value="">
           <div class="editor-layout">
             <div>
-              <div class="editor-box">
-                <div class="editor-toolbar">
-                  <button class="toolbar-btn" style="font-weight:700">B</button>
-                  <button class="toolbar-btn" style="font-style:italic">I</button>
-                  <button class="toolbar-btn"><u>U</u></button>
-                  <div class="toolbar-sep"></div>
-                  <button class="toolbar-btn">H1</button><button class="toolbar-btn">H2</button>
-                  <div class="toolbar-sep"></div>
-                  <button class="toolbar-btn">≡</button><button class="toolbar-btn">⊞</button>
-                  <div class="toolbar-sep"></div>
-                  <button class="toolbar-btn" style="color:var(--primary);font-size:11px">MD</button>
-                  <button class="toolbar-btn" style="color:var(--primary);font-size:11px">↑ 上传</button>
-                </div>
-                <div class="editor-area">
-                  <h2>一、需求背景</h2>
-                  <p>当前用户积分体系已运营 2 年，积分消耗率持续下降（当前仅 23%），用户对积分价值感知模糊，导致复购动力不足。本次改版目标是提升积分消耗率至 45%+，增强用户留存。</p>
-                  <h2>二、目标用户</h2>
-                  <p>核心：购买频次 ≥ 3 次/月的活跃用户（约 120 万）；次核心：注册 30 天内未复购用户（约 80 万）</p>
-                  <h2>三、功能设计</h2>
-                  <p>1. 积分商城升级：新增实物兑换、优惠券直兑、联名权益三类商品...</p>
-                  <p>2. 积分有效期提醒：到期前 7/3/1 天 push 通知...</p>
-                  <h2>四、数据指标</h2>
-                  <p class="placeholder">请填写核心数据指标及衡量方式...</p>
-                  <h2>五、风险评估</h2>
-                  <p class="placeholder">请填写潜在风险及应对策略...</p>
-                </div>
+              <div class="form-row">
+                <label>标题 <span id="prd-status-badge" style="font-weight:400;margin-left:8px"></span></label>
+                <input type="text" class="form-input" id="prd-edit-title" maxlength="200" placeholder="例如：会员订阅功能方案 v2">
               </div>
-              <div style="font-size:12px;color:var(--text-4);text-align:right;margin-top:6px">已输入 412 字 · 自动保存于 14:32</div>
+              <div class="editor-box">
+                <textarea class="form-textarea" id="prd-edit-content" rows="22"
+                  style="width:100%;border:none;outline:none;padding:14px;font-family:'SF Mono',Consolas,'PingFang SC',monospace;font-size:13px;line-height:1.7;resize:vertical;min-height:420px"
+                  placeholder="用 Markdown 编写 PRD 内容。建议至少包含 # 背景 / # 目标 / # 功能设计 三个章节(提交评审时会校验)。
+
+# 背景
+描述当前问题与改版动机...
+
+# 目标
+- 量化目标 1
+- 量化目标 2
+
+# 功能设计
+1. 功能模块一
+2. 功能模块二"></textarea>
+              </div>
+              <div style="font-size:12px;color:var(--text-4);text-align:right;margin-top:6px">
+                <span id="prd-char-count">0 字符</span> · <span id="prd-save-status">未保存</span>
+              </div>
             </div>
             <div class="side-panels">
               <div class="panel">
-                <div class="panel-label">PRD 模板</div>
-                <div class="tpl-item">📋 标准功能模板</div>
-                <div class="tpl-item">🚀 新产品立项模板</div>
-                <div class="tpl-item">🔧 优化迭代模板</div>
-                <div class="tpl-item">💰 商业化功能模板</div>
+                <div class="panel-label">提交评审门槛 (#6 校验)</div>
+                <div class="check-item ok">✓ 标题 ≥ 5 字符</div>
+                <div class="check-item ok">✓ 内容 ≥ 200 字符</div>
+                <div class="check-item ok">✓ 至少含 2 个核心章节</div>
+                <div style="font-size:11px;color:var(--text-3);margin-top:8px">核心章节支持中英文同义词:背景/概述/Background;目标/Goal;功能设计/方案/Design</div>
               </div>
               <div class="panel">
-                <div class="panel-label">完整性检查</div>
-                <div class="check-item ok">✓ 需求背景</div>
-                <div class="check-item ok">✓ 目标用户</div>
-                <div class="check-item ok">✓ 功能设计</div>
-                <div class="check-item warn">⚠ 数据指标（未填写）</div>
-                <div class="check-item warn">⚠ 风险评估（未填写）</div>
+                <div class="panel-label">PRD 状态机</div>
+                <div class="check-item ok">DRAFT → 提交评审</div>
+                <div class="check-item ok">SUBMITTED → AI 多 Agent 评审</div>
+                <div class="check-item warn">UNDER_REVIEW → 评审中(待 #17+)</div>
+                <div class="check-item warn">APPROVED / REJECTED(待 #20)</div>
               </div>
             </div>
           </div>
         </div>
         <div class="bottom-bar">
-          <div class="bottom-info">草稿已保存</div>
+          <div class="bottom-info" id="prd-edit-info">新建 PRD</div>
           <div class="bottom-actions">
             <button class="btn btn-ghost" onclick="navTo('list',null)">取消</button>
-            <button class="btn btn-primary" onclick="goStep('agent')">下一步：选择评审员 →</button>
+            <button class="btn btn-danger-outline" id="prd-delete-btn" onclick="deleteDraft()" style="display:none">🗑️ 删除草稿</button>
+            <button class="btn btn-ghost" id="prd-save-btn" onclick="saveDraft()">💾 保存草稿</button>
+            <button class="btn btn-primary" id="prd-next-btn" onclick="goNextFromEdit()">下一步:选评审员 →</button>
           </div>
         </div>
       </div>
 
-      <!-- ===== 选择评审员 ===== -->
+      <!-- ===== 选评审员 ===== -->
       <div id="page-agent" class="page">
         <div class="main">
-          <div class="section-title">选择评审员</div>
-          <div class="section-sub">可多选，多位评审员将并行从不同视角给出意见</div>
-          <div class="selected-tip">已选择：产品顾问、商业分析师 · 将从用户价值和 ROI 两个维度并行评审</div>
-          <div class="agent-grid">
-            <div class="agent-card selected" onclick="toggleAgent(this)">
-              <div class="agent-icon">🧑‍💼</div><div class="agent-name">产品顾问</div>
-              <div class="agent-tag">用户价值</div>
-              <div class="agent-desc">评审需求合理性、用户故事完整性、核心流程逻辑，识别用户体验风险</div>
-            </div>
-            <div class="agent-card" onclick="toggleAgent(this)">
-              <div class="agent-icon">🏗️</div><div class="agent-name">技术架构师</div>
-              <div class="agent-tag">可行性</div>
-              <div class="agent-desc">评估技术复杂度、依赖风险、实现路径，识别技术负债和性能隐患</div>
-            </div>
-            <div class="agent-card selected" onclick="toggleAgent(this)">
-              <div class="agent-icon">📊</div><div class="agent-name">商业分析师</div>
-              <div class="agent-tag">ROI</div>
-              <div class="agent-desc">评估市场机会、商业模式合理性、收益预测，识别商业风险</div>
-            </div>
-            <div class="agent-card" onclick="toggleAgent(this)">
-              <div class="agent-icon">🔍</div><div class="agent-name">竞品研究员</div>
-              <div class="agent-tag">差异化</div>
-              <div class="agent-desc">对比行业竞品方案，识别差异化机会，评估产品护城河</div>
-            </div>
-            <div class="agent-card" onclick="toggleAgent(this)">
-              <div class="agent-icon">🛡️</div><div class="agent-name">合规风控官</div>
-              <div class="agent-tag">安全合规</div>
-              <div class="agent-desc">检查数据安全、隐私保护、法律合规风险，识别监管红线</div>
-            </div>
-          </div>
+          <div class="section-title">选评审员</div>
+          <div class="section-sub">可多选,多位评审员将并行从不同视角给出意见(数据来自后端 /api/v1/reviewers)</div>
+          <div class="selected-tip" id="flow-agent-tip">尚未选择评审员</div>
+          <div class="agent-grid" id="flow-agent-grid"></div>
         </div>
         <div class="bottom-bar">
-          <div class="bottom-info">已选 2 位评审员</div>
+          <div class="bottom-info" id="flow-agent-info">已选 0 位评审员</div>
           <div class="bottom-actions">
             <button class="btn btn-ghost" onclick="goStep('edit')">← 上一步</button>
-            <button class="btn btn-primary" onclick="goStep('style')">下一步：选择风格 →</button>
+            <button class="btn btn-primary" onclick="goStepStyle()">下一步:定评审风格 →</button>
           </div>
         </div>
       </div>
 
-      <!-- ===== 选择风格 ===== -->
+      <!-- ===== 定评审风格 ===== -->
       <div id="page-style" class="page">
         <div class="main">
-          <div class="section-title">选择评审风格</div>
-          <div class="section-sub">风格决定评审深度与态度，与评审员正交组合</div>
-          <div class="style-grid">
-            <div class="style-card" onclick="selectStyle(this)">
-              <div class="style-header"><div class="style-emoji">⚡</div><div class="style-name">宽松</div></div>
-              <div class="style-scene">小迭代 · 紧急优化 · 功能微调</div>
-              <div class="style-rule-box">仅排查 P0/P1，输出上限 5 条，优先保障评审效率。</div>
-              <div class="focus-row"><span class="focus-label">✅</span><span>核心流程 · 致命缺陷</span></div>
-              <div class="focus-row"><span class="focus-label">⏭</span><span>体验细节 · 非核心建议</span></div>
-            </div>
-            <div class="style-card" onclick="selectStyle(this)">
-              <div class="style-header"><div class="style-emoji">🎯</div><div class="style-name">务实</div></div>
-              <div class="style-scene">排期紧 · 快速试错 · 敏捷迭代</div>
-              <div class="style-rule-box">三档分类 + 整改成本标注，输出可直接作为排期输入。</div>
-              <div class="focus-row"><span class="focus-label">✅</span><span>落地可行性 · 成本收益</span></div>
-              <div class="focus-row"><span class="focus-label">⏭</span><span>理论优化 · 低优先级建议</span></div>
-            </div>
-            <div class="style-card selected" onclick="selectStyle(this)">
-              <div class="style-header"><div class="style-emoji">📋</div><div class="style-name">标准 <span class="style-default-tag">默认</span></div></div>
-              <div class="style-scene">常规立项 · 正式版本评审</div>
-              <div class="style-rule-box">全维度评审，P0/P1 必改，P2 可选，中立客观。</div>
-              <div class="focus-row"><span class="focus-label">✅</span><span>全维度完整评审</span></div>
-            </div>
-            <div class="style-card" onclick="selectStyle(this)">
-              <div class="style-header"><div class="style-emoji">🔬</div><div class="style-name">严谨</div></div>
-              <div class="style-scene">大版本 · 核心功能 · 商业化功能</div>
-              <div class="style-rule-box">全量检出，P2 升级整改项，含影响范围+出现概率，零容忍。</div>
-              <div class="focus-row"><span class="focus-label">✅</span><span>全量问题 · 隐性风险</span></div>
-            </div>
-          </div>
-          <div class="tip-bar success">
-            <span>📚</span>
-            <div><strong>业务知识库已就绪</strong> · 最后更新：今天 09:15 · 38 篇文档已索引<br><span style="font-size:12px;opacity:.8">检索范围：/business-rules/ · /product-specs/ · /compliance/</span></div>
-          </div>
+          <div class="section-title">定评审风格</div>
+          <div class="section-sub">风格决定评审深度与态度,与评审员正交组合(数据来自后端 /api/v1/review-styles)</div>
+          <div class="style-grid" id="flow-style-grid"></div>
         </div>
         <div class="bottom-bar">
-          <div class="bottom-info">标准风格 · 2 位评审员</div>
+          <div class="bottom-info" id="flow-style-info">未选风格</div>
           <div class="bottom-actions">
             <button class="btn btn-ghost" onclick="goStep('agent')">← 上一步</button>
-            <button class="btn btn-outline" onclick="goStep('precheck')">先内审一下</button>
-            <button class="btn btn-primary" onclick="goStep('reviewing')">提交正式评审 →</button>
+            <button class="btn btn-primary" onclick="goStepPrecheck()">下一步:提交评审 →</button>
           </div>
         </div>
       </div>
 
-      <!-- ===== 内审 ===== -->
+      <!-- ===== 提交评审 ===== -->
       <div id="page-precheck" class="page">
         <div class="main">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
-            <div><div class="section-title">内审</div><div class="section-sub">快速检查，结果仅供参考，不归档</div></div>
-            <button class="btn btn-outline btn-sm">🔄 重新内审</button>
+            <div><div class="section-title">提交评审</div><div class="section-sub">确认所选评审员 + 评审风格,点击提交即触发后端归档(进入 SUBMITTED 状态)</div></div>
           </div>
           <div class="review-layout">
             <div class="editor-box">
               <div class="editor-toolbar">
-                <span style="font-size:12px;color:var(--text-3)">用户积分体系 v2.0</span>
+                <span style="font-size:12px;color:var(--text-3)" id="flow-precheck-title">—</span>
                 <div style="margin-left:auto;font-size:11px;color:var(--text-4)">只读预览</div>
               </div>
-              <div class="editor-area" style="min-height:360px">
-                <h2 style="background:#FFFBE6;border-radius:4px;padding:2px 6px;display:inline-block">一、需求背景</h2>
-                <p>当前积分消耗率仅 23%，目标提升至 45%+，增强用户复购。</p>
-                <h2>二、目标用户</h2>
-                <p>核心：活跃用户 120 万；次核心：未复购用户 80 万</p>
-                <h2 style="background:#FFF0F0;border-radius:4px;padding:2px 6px;display:inline-block">三、功能设计</h2>
-                <p>积分商城升级、有效期提醒、积分加速活动...</p>
-                <h2 style="background:#FFFBE6;border-radius:4px;padding:2px 6px;display:inline-block">四、数据指标</h2>
-                <p style="color:var(--danger)">⚠ 本章节内容为空</p>
-                <h2>五、风险评估</h2>
-                <p style="color:var(--warning)">⚠ 未量化风险阈值和应对方案</p>
-              </div>
+              <div class="editor-area" id="flow-precheck-content" style="min-height:360px;white-space:pre-wrap;font-family:'SF Mono',Consolas,'PingFang SC',monospace;font-size:13px;line-height:1.7"></div>
             </div>
             <div>
               <div class="anno-panel">
                 <div class="anno-header">
-                  <div class="anno-title"><div class="dot-live"></div>内审批注 · 产品顾问</div>
-                  <span style="font-size:11px;color:var(--text-3)">标准</span>
+                  <div class="anno-title">📋 评审配置</div>
                 </div>
                 <div class="anno-body">
-                  <div class="rag-tip">
-                    <div class="rag-tip-title">📚 已检索到相关业务知识</div>
-                    <div class="rag-tip-item">· /business-rules/points-system.md</div>
-                    <div class="rag-tip-item">· /product-specs/user-retention.md</div>
+                  <div style="margin-bottom:14px">
+                    <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">评审员 (<span id="flow-precheck-agent-count">0</span>)</div>
+                    <div id="flow-precheck-agents"></div>
                   </div>
-                  <div class="anno-item p1">
-                    <div class="anno-level">P1 · 严重</div>
-                    <div class="anno-text">数据指标章节完全缺失，知识库要求必须定义「积分消耗率」「MAU 复购率」「积分商城 GMV」三项核心指标。</div>
+                  <div style="margin-bottom:14px">
+                    <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">评审风格</div>
+                    <div id="flow-precheck-style"></div>
                   </div>
-                  <div class="anno-item p1">
-                    <div class="anno-level">P1 · 严重</div>
-                    <div class="anno-text">联名权益涉及第三方合作，知识库规范需提前 3 个月确认资源，当前未说明资源锁定状态。</div>
-                  </div>
-                  <div class="anno-item p2">
-                    <div class="anno-level">P2 · 优化</div>
-                    <div class="anno-text">双倍积分活动时间未定义，与大促节点叠加时积分成本可能超预期。</div>
-                  </div>
-                  <div style="padding:8px 0 2px;border-top:1px solid var(--border-light);font-size:12px;color:var(--text-3)">发现 2 P1 · 2 P2，建议补充后再正式提交</div>
+                  <div style="padding:8px 0 2px;border-top:1px solid var(--border-light);font-size:12px;color:var(--text-3)" id="flow-precheck-hint">点"确认提交评审"触发 #6 输入门槛 + 真后端 SUBMITTED 归档</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
         <div class="bottom-bar">
-          <div class="bottom-info">内审完成 · 2 P1 · 2 P2</div>
+          <div class="bottom-info">评审就绪 · 提交后进入 SUBMITTED 状态归档</div>
           <div class="bottom-actions">
             <button class="btn btn-ghost" onclick="goStep('style')">← 返回修改</button>
-            <button class="btn btn-primary" onclick="goStep('reviewing')">提交正式评审 →</button>
+            <button class="btn btn-primary" onclick="submitForReview()">✓ 确认提交评审</button>
           </div>
         </div>
       </div>
@@ -1071,27 +980,48 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
       <!-- ===== 评审中 ===== -->
       <div id="page-reviewing" class="page">
         <div class="main">
-          <div class="section-title">评审进行中</div>
-          <div class="section-sub">2 位评审员并行评审，请稍候…</div>
-          <div class="progress-card">
-            <div style="font-size:13px;font-weight:600;color:var(--text-1);margin-bottom:16px;display:flex;align-items:center;gap:8px"><div class="dot-live"></div>评审员进度</div>
-            <div class="prog-row">
-              <div class="prog-name">🧑‍💼 产品顾问</div>
-              <div class="prog-track"><div class="prog-fill" style="width:100%"></div></div>
-              <div class="prog-pct done">完成</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <div>
+              <div class="section-title" id="review-detail-title">评审详情</div>
+              <div class="section-sub" id="review-detail-sub">已提交评审,等待 AI Agent 评审结果(#17/#18 真接通后展示)</div>
             </div>
-            <div class="prog-row">
-              <div class="prog-name">📊 商业分析师</div>
-              <div class="prog-track"><div class="prog-fill" style="width:72%"></div></div>
-              <div class="prog-pct">72%</div>
+            <span id="review-detail-status" style="font-size:13px"></span>
+          </div>
+          <div class="review-layout">
+            <div class="editor-box">
+              <div class="editor-toolbar">
+                <span style="font-size:12px;color:var(--text-3)" id="review-detail-prd-title">—</span>
+                <div style="margin-left:auto;font-size:11px;color:var(--text-4)">只读 · 版本快照</div>
+              </div>
+              <div class="editor-area" id="review-detail-content" style="min-height:360px;white-space:pre-wrap;font-family:'SF Mono',Consolas,'PingFang SC',monospace;font-size:13px;line-height:1.7"></div>
+            </div>
+            <div>
+              <div class="anno-panel">
+                <div class="anno-header">
+                  <div class="anno-title">📋 评审配置</div>
+                </div>
+                <div class="anno-body">
+                  <div style="margin-bottom:14px">
+                    <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">评审员 (<span id="review-detail-agent-count">0</span>)</div>
+                    <div id="review-detail-agents"></div>
+                  </div>
+                  <div style="margin-bottom:14px">
+                    <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">评审风格</div>
+                    <div id="review-detail-style"></div>
+                  </div>
+                  <div style="padding:10px;background:var(--primary-light);border-radius:7px;font-size:12px;line-height:1.6;color:var(--text-2)">
+                    💡 多 Agent 并行评审 + 结果聚合 + 评审报告等能力将在 <b>#17–#21</b> 落地。<br>当前阶段仅展示提交快照。
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="tip-bar info" style="margin-bottom:20px">
-            <span>📚</span>
-            <div><strong>知识库检索完成</strong> · 检索到 3 篇相关文档<br>
-            <span style="font-size:12px;opacity:.85">· /business-rules/points-system.md · § 积分消耗规则<br>· /product-specs/user-retention.md · § 复购激励策略<br>· /business-rules/third-party-cooperation.md · § 联名合作规范</span></div>
+        </div>
+        <div class="bottom-bar">
+          <div class="bottom-info" id="review-detail-info">—</div>
+          <div class="bottom-actions">
+            <button class="btn btn-ghost" onclick="navTo('list',null)">← 返回列表</button>
           </div>
-          <div style="text-align:center"><button class="btn btn-primary" onclick="goStep('report')" style="padding:10px 36px">查看评审报告 →</button></div>
         </div>
       </div>
 
@@ -1200,7 +1130,38 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
   </div><!-- end app-layout -->
 </div><!-- end app -->
 
-<!-- ===== 评审员 Modal（新建/编辑） ===== -->
+<!-- ===== PRD 从 URL 导入 Modal(#5 SSE 流式)===== -->
+<div class="modal-mask" id="prd-url-modal">
+  <div class="modal-card">
+    <div class="modal-hd">
+      <div class="modal-title">从 URL 导入 PRD</div>
+      <button class="modal-close" onclick="closeImportFromUrl()">×</button>
+    </div>
+    <div class="modal-bd">
+      <div class="form-row">
+        <label>文档 URL<span class="req">*</span></label>
+        <input type="url" class="form-input" id="prd-url-input"
+          placeholder="https://example.com/your-doc.html(或任何可公开访问的文档地址)">
+        <div class="form-hint" style="margin-top:8px">
+          系统会抓取该 URL 的内容,用 AI 自动摘要为 PRD 标题 + 内容。
+          支持 HTML 网页、Markdown 等公开文档。需要鉴权的飞书/Notion/Confluence 暂不支持。
+        </div>
+      </div>
+      <div id="prd-url-progress" style="display:none;margin-top:14px">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--primary-light);border-radius:7px">
+          <div class="dot-live"></div>
+          <span id="prd-url-stage" style="font-size:13px;color:var(--text-1)">准备就绪…</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeImportFromUrl()">取消</button>
+      <button class="btn btn-primary" id="prd-url-submit" onclick="submitImportFromUrl()">开始导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 评审员 Modal(新建/编辑) ===== -->
 <div class="modal-mask" id="reviewer-modal">
   <div class="modal-card">
     <div class="modal-hd">
@@ -1358,6 +1319,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
 <script src="js/reviewer.js"></script>
 <script src="js/review-style.js"></script>
 <script src="js/kb-repository.js"></script>
+<script src="js/prd.js"></script>
+<script src="js/prd-upload.js"></script>
+<script src="js/prd-from-url.js"></script>
+<script src="js/prd-flow.js"></script>
 <script>
 // ── Auth 守卫：未登录跳登录页 ──────────────────────────
 if (!requireAuth()) { /* already redirected */ }
@@ -1399,23 +1364,31 @@ function toggleSidebar() {
 const bcMap = {
   list:'我的方案', 'review-manage':'评审管理',
   'reviewer-manage':'AI 评审员', 'style-manage':'评审风格', kb:'知识库',
-  edit:'我的方案 › 编写方案', agent:'我的方案 › 选择评审员',
-  style:'我的方案 › 评审风格', precheck:'我的方案 › 内审',
-  reviewing:'我的方案 › 评审中', report:'我的方案 › 评审报告'
+  edit:'我的方案 › 编写方案', agent:'我的方案 › 选评审员',
+  style:'我的方案 › 定评审风格', precheck:'我的方案 › 提交评审',
+  reviewing:'我的方案 › 评审详情'
 };
 
 function navTo(name, navEl) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const pg = document.getElementById('page-' + name);
   if (pg) pg.classList.add('active');
-  const isFlow = ['edit','agent','style','precheck','reviewing','report'].includes(name);
+  // reviewing(评审详情)也归入流程视图,但作为"已完成"态显示(4 步全 done)
+  const isFlow = ['edit','agent','style','precheck','reviewing'].includes(name);
   document.getElementById('steps-wrap').style.display = isFlow ? 'block' : 'none';
   if (isFlow) updateSteps(name);
+  // 评审方案进度记录:进每一步都把进度持久化(localStorage,prd.js 提供)
+  if (isFlow && typeof saveFlowProgress === 'function') {
+    const prdId = document.getElementById('prd-edit-id') && document.getElementById('prd-edit-id').value;
+    if (prdId) saveFlowProgress(prdId, name);
+  }
+  // 流程页(agent/style/precheck)真后端数据加载
+  if (typeof maybeLoadFlowPage === 'function') maybeLoadFlowPage(name);
   document.getElementById('breadcrumb').innerHTML = '<span>' + (bcMap[name] || name) + '</span>';
   if (navEl) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     navEl.classList.add('active');
-  } else if (['list','edit','agent','style','precheck','reviewing','report'].includes(name)) {
+  } else if (['list','edit','agent','style','precheck','reviewing'].includes(name)) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.querySelectorAll('.nav-item')[0]?.classList.add('active');
   }
@@ -1424,6 +1397,7 @@ function navTo(name, navEl) {
   window.scrollTo(0,0);
 
   // ── 各模块数据加载钩子 ──
+  if (name === 'list' && typeof loadPrds === 'function') loadPrds();
   if (name === 'reviewer-manage' && typeof loadReviewers === 'function') loadReviewers();
   if (name === 'style-manage' && typeof loadReviewStyles === 'function') loadReviewStyles();
   if (name === 'kb' && typeof loadKbStatus === 'function') loadKbStatus();
@@ -1432,10 +1406,11 @@ function navTo(name, navEl) {
 function goStep(name) { navTo(name, null); }
 
 function updateSteps(name) {
-  const steps = ['edit','agent','style','precheck','report'];
-  const ids   = ['step-edit','step-agent','step-style','step-precheck','step-report'];
-  const cur   = name === 'reviewing' ? 'report' : name;
-  const idx   = steps.indexOf(cur);
+  const steps = ['edit','agent','style','precheck'];
+  const ids   = ['step-edit','step-agent','step-style','step-precheck'];
+  // reviewing(评审详情) = 流程已全部走完,4 步全 done,无 active
+  const allDone = (name === 'reviewing' || name === 'report');
+  const idx    = allDone ? steps.length : steps.indexOf(name);
   ids.forEach((sid, i) => {
     const el = document.getElementById(sid);
     if (!el) return;

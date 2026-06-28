@@ -9,6 +9,7 @@ import com.prdreview.knowledgebase.git.repository.KbRepositoryRepository;
 import com.prdreview.knowledgebase.git.service.GitWatcher;
 import com.prdreview.knowledgebase.git.service.KbRepositoryApplicationService;
 import com.prdreview.knowledgebase.git.service.KbSyncTaskService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,13 +18,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -42,6 +47,18 @@ class KbRepositoryApplicationServiceTest {
     @BeforeEach
     void initBaseDir() {
         ReflectionTestUtils.setField(service, "cloneBaseDir", "./kb-data");
+        // fix-kb-sync-correctness：repository.update 现在返回 KbRepository。让 mock 直传入参当作"自增后"对象。
+        lenient().when(repository.update(any())).thenAnswer(inv -> inv.getArgument(0));
+        // fix-kb-sync-correctness Bug A：create() 调 TransactionSynchronizationManager.registerSynchronization，
+        // 需要先 init 让其处于"事务激活"状态，否则会抛 IllegalStateException
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    @AfterEach
+    void clearSync() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     private KbRepository saved(Long id, String name, SyncStatus status, boolean withSecret) {
@@ -93,7 +110,19 @@ class KbRepositoryApplicationServiceTest {
 
         assertThat(dto.id()).isEqualTo(100L);
         assertThat(dto.authSecretMasked()).isEqualTo("***"); // ADMIN 视角
+
+        // fix-kb-sync-correctness Bug A：executeAsync 必须在事务提交后才调用，
+        // 创建瞬间不应调用，需手动触发 afterCommit 才会发起
+        verify(syncTaskService, never()).executeAsync(any());
+
+        // 验证注册了一个 TransactionSynchronization，且 afterCommit 会触发 executeAsync
+        List<TransactionSynchronization> syncs = TransactionSynchronizationManager.getSynchronizations();
+        assertThat(syncs)
+            .as("create 必须注册一个事务同步回调用于在 afterCommit 触发首次同步")
+            .hasSize(1);
+        syncs.get(0).afterCommit();
         verify(syncTaskService).executeAsync(100L);
+
         verify(repository, times(1)).update(any()); // 一次 update 补 localPath
     }
 

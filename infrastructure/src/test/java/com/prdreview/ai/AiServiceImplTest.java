@@ -35,6 +35,9 @@ class AiServiceImplTest {
     private DocumentFetcher documentFetcher;
 
     @Mock
+    private DocumentParser documentParser;
+
+    @Mock
     private ChatClientRequestSpec requestSpec;
 
     @Mock
@@ -48,7 +51,7 @@ class AiServiceImplTest {
     @BeforeEach
     void setUp() {
         when(chatClientBuilder.build()).thenReturn(chatClient);
-        aiService = new AiServiceImpl(chatClientBuilder, documentFetcher, new ObjectMapper());
+        aiService = new AiServiceImpl(chatClientBuilder, documentFetcher, documentParser, new ObjectMapper());
     }
 
     @Test
@@ -209,5 +212,51 @@ class AiServiceImplTest {
         StepVerifier.create(aiService.streamCompletion("测试 prompt"))
                 .expectErrorMatches(ex -> ex == original) // 同一实例
                 .verify();
+    }
+
+    // ──────────────────────────────────────────────────
+    // #7 summarizeFromFile
+    // ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("summarizeFromFile — 调 DocumentParser → 复用 summarizeText 返回 SummarizeResult")
+    void summarizeFromFile_parsesAndSummarizes() {
+        byte[] bytes = "fake pdf bytes".getBytes();
+        String filename = "test.pdf";
+        String parsedText = "这是从 PDF 解析出的纯文本内容,讲述了一个产品评审系统的需求。";
+
+        when(documentParser.parseText(bytes, filename)).thenReturn(parsedText);
+        // summarizeText 走标准 chat client 链路返回合法 JSON
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn(
+            "{\"title\":\"测试文档\",\"content\":\"摘要正文 100 字以内描述...\"}"
+        );
+
+        com.prdreview.ai.dto.SummarizeResult result = aiService.summarizeFromFile(bytes, filename);
+
+        assertThat(result).isNotNull();
+        assertThat(result.title()).isEqualTo("测试文档");
+        assertThat(result.content()).contains("摘要正文");
+        verify(documentParser).parseText(bytes, filename);
+    }
+
+    @Test
+    @DisplayName("summarizeFromFile — DocumentParser 抛 BizException 时向上传播,不调 ChatClient")
+    void summarizeFromFile_parserFails_propagates() {
+        byte[] bytes = "fake zip".getBytes();
+        com.prdreview.common.exception.BizException parserErr =
+            new com.prdreview.common.exception.BizException(
+                com.prdreview.common.exception.ErrorCode.PRD_FILE_TYPE_UNSUPPORTED,
+                "不支持: application/zip");
+        when(documentParser.parseText(bytes, "x.zip")).thenThrow(parserErr);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+            aiService.summarizeFromFile(bytes, "x.zip"))
+            .isSameAs(parserErr);
+
+        // 不应触达 chat client
+        org.mockito.Mockito.verify(chatClient, org.mockito.Mockito.never()).prompt();
     }
 }

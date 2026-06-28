@@ -123,3 +123,35 @@ AI 评审系统的底层调用基础设施：定义 `AiService` 接口屏蔽 Spr
 #### Scenario: 配置读取成功
 - **WHEN** 应用启动，`application.yml` 配置了 `ai.fetch.*`
 - **THEN** `AiProperties` Bean MUST 正确注入对应值，`AiServiceImpl` MUST 使用该配置创建 `WebClient`
+
+---
+
+### Requirement: AI 摘要服务（AiService）
+系统 SHALL 提供 `AiService` 接口暴露 AI 摘要能力，屏蔽底层 Spring AI 与 LLM provider 细节。接口包含：
+
+- `summarizeFromUrl(String url)` — 抓取 URL 内容后摘要（#4.5 已实现）
+- `summarizeText(String rawText)` — 对已有文本摘要（#4.5 已实现）
+- `streamCompletion(String prompt)` / `streamCompletion(String system, String user)` — 流式补全（#9 / fix-kb-sync-correctness 实现）
+- `summarizeFromFile(byte[] bytes, String filename)` — 解析文件后摘要（#7 新增）
+
+`summarizeFromFile` 的实现 SHALL：
+1. 用 Tika `AutoDetectParser` 基于内容 + 文件名检测 MIME 类型
+2. 若 MIME 不在白名单（PDF / DOCX / DOC / TXT / MD），抛 `BizException(PRD_FILE_TYPE_UNSUPPORTED)`
+3. 用对应 parser 解析为纯文本；若解析失败或结果空白/过短，抛 `BizException(PRD_FILE_PARSE_FAILED)`
+4. 调 `summarizeText(parsedText)` 复用现有 AI 摘要流程，返回 `SummarizeResult`
+
+#### Scenario: summarizeFromFile 解析 PDF 后调用 summarizeText
+- **WHEN** 传入合法 PDF 字节流
+- **THEN** Tika MUST 检测为 `application/pdf`、解析为纯文本，并调 `summarizeText` 返回带 title/content 的 `SummarizeResult`
+
+#### Scenario: summarizeFromFile 拒绝白名单外类型
+- **WHEN** 传入 `.zip` 文件字节流
+- **THEN** MUST 抛 `BizException(PRD_FILE_TYPE_UNSUPPORTED)`，不调用 ChatClient
+
+#### Scenario: summarizeFromFile 文本过短抛失败
+- **WHEN** Tika 解析后得到 < 10 字符的纯文本（疑似扫描件 PDF）
+- **THEN** MUST 抛 `BizException(PRD_FILE_PARSE_FAILED)`，错误消息提示"可能是扫描件"
+
+#### Scenario: summarizeFromFile 与 summarizeFromUrl 行为对称
+- **WHEN** 同一份内容通过文件上传和 URL 抓取分别调用
+- **THEN** 两者返回的 `SummarizeResult` MUST 是等价的（同一份原始文本走相同的 summarizeText 流程）

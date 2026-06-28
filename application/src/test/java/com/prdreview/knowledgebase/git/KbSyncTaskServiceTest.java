@@ -11,6 +11,7 @@ import com.prdreview.knowledgebase.git.model.SyncStatus;
 import com.prdreview.knowledgebase.git.repository.KbRepositoryRepository;
 import com.prdreview.knowledgebase.git.service.GitWatcher;
 import com.prdreview.knowledgebase.git.service.KbSyncTaskService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -41,6 +43,14 @@ class KbSyncTaskServiceTest {
     @Mock ApplicationEventPublisher publisher;
 
     @InjectMocks KbSyncTaskService service;
+
+    @BeforeEach
+    void setupUpdateMockToReturnArg() {
+        // fix-kb-sync-correctness：repository.update 现在返回 KbRepository（带新 version）。
+        // 测试用入参直传当作"已自增"的替身，符合修复后的契约。
+        org.mockito.Mockito.lenient().when(repository.update(any()))
+            .thenAnswer(inv -> inv.getArgument(0));
+    }
 
     private KbRepository repo(SyncStatus status, String lastCommit) {
         return KbRepository.reconstruct(
@@ -149,5 +159,41 @@ class KbSyncTaskServiceTest {
         when(repository.findById(99L)).thenReturn(null);
         service.execute(99L);
         verify(gitWatcher, never()).cloneRepository(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("fix-kb-sync-correctness Bug B：连续 markSyncing+markError 时 update 用刷新后 version，不静默失败")
+    void markSyncingThenMarkError_usesRefreshedVersion() {
+        KbRepository initial = repo(SyncStatus.HEALTHY, null);
+        when(repository.findById(1L)).thenReturn(initial);
+        // 模拟 MyBatis-Plus 乐观锁行为：每次 update 都返回带新 version 的对象
+        when(repository.update(any())).thenAnswer(inv -> {
+            KbRepository in = inv.getArgument(0);
+            return KbRepository.reconstruct(
+                in.getId(), in.getName(), in.getRemoteUrl(), in.getBranch(), in.getLocalPath(),
+                in.getAuthType(), in.getAuthSecret(), in.getPollIntervalMs(),
+                in.getSyncStatus(), in.getLastSyncedCommit(), in.getLastSyncedAt(), in.getLastErrorMessage(),
+                in.getVersion() + 1, in.getDeleted(),  // ← version 自增
+                in.getCreatedAt(), LocalDateTime.now()
+            );
+        });
+        when(gitWatcher.cloneRepository(any(), any(), any(), any(), any()))
+            .thenThrow(new BizException(ErrorCode.KB_GIT_CLONE_FAILED, "clone failed"));
+
+        service.execute(1L);
+
+        // 验证 update 被调用至少 2 次（markSyncing + markError），且每次入参的 sync_status 正确
+        ArgumentCaptor<KbRepository> captor = ArgumentCaptor.forClass(KbRepository.class);
+        verify(repository, atLeast(2)).update(captor.capture());
+        List<KbRepository> updates = captor.getAllValues();
+        assertThat(updates).extracting(KbRepository::getSyncStatus)
+            .containsSubsequence(SyncStatus.SYNCING, SyncStatus.ERROR);
+        // 第二次（markError）入参的 version 必须是初始 +1（来自第一次 update 的返回值），不是初始值
+        KbRepository markErrorUpdate = updates.stream()
+            .filter(r -> r.getSyncStatus() == SyncStatus.ERROR).findFirst().orElseThrow();
+        assertThat(markErrorUpdate.getVersion())
+            .as("markError 的 update 入参 version 必须用 markSyncing 返回值的 version，否则会乐观锁失败")
+            .isEqualTo(initial.getVersion() + 1);
+        assertThat(markErrorUpdate.getLastErrorMessage()).contains("clone failed");
     }
 }

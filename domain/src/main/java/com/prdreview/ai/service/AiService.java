@@ -49,4 +49,17 @@ public interface AiService {
      * @return token chunk 流；流终止表示 LLM 已输出完毕
      */
     Flux<String> streamCompletion(String systemPrompt, String userMessage);
+
+    /**
+     * 解析上传文件(PDF/Word/Markdown/纯文本) → AI 摘要为 title + content。
+     *
+     * <p>底层用 Tika 检测 MIME 与解析为纯文本,然后复用 {@link #summarizeText(String)}。
+     *
+     * @param bytes    文件字节流(完整内容)
+     * @param filename 原始文件名(供 Tika MIME 检测使用,允许带后缀)
+     * @return 摘要结果,title / content 均非空
+     * @throws com.prdreview.common.exception.BizException PRD_FILE_TYPE_UNSUPPORTED 类型不在白名单;
+     *                                                    PRD_FILE_PARSE_FAILED 解析失败或文本过短
+     */
+    SummarizeResult summarizeFromFile(byte[] bytes, String filename);
 }

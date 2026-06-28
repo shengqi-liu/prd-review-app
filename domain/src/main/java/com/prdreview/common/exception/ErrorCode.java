@@ -48,6 +48,9 @@ public enum ErrorCode {
     PRD_MISSING_REQUIRED_SECTION(30003, "PRD 缺少必要章节（背景/目标/功能设计）"),
     PRD_VERSION_CONFLICT(30004, "PRD 版本冲突，请刷新后重试"),
     PRD_OPERATION_NOT_ALLOWED(30005, "当前状态不允许该操作"),
+    PRD_FILE_TYPE_UNSUPPORTED(30006, "不支持的文件类型"),
+    PRD_FILE_TOO_LARGE(30007, "文件超过 10MB 限制"),
+    PRD_FILE_PARSE_FAILED(30008, "文件解析失败"),
 
     // ── 评审域 40000–49999 ───────────────────────────────
     REVIEW_NOT_FOUND(40001, "评审记录不存在"),

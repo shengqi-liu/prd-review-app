@@ -2,7 +2,10 @@ package com.prdreview.prd.controller;
 
 import com.prdreview.common.security.CurrentUser;
 import com.prdreview.common.sse.SseEventEmitter;
+import com.prdreview.common.exception.BizException;
+import com.prdreview.common.exception.ErrorCode;
 import com.prdreview.prd.CreatePrdCommand;
+import com.prdreview.prd.CreatePrdFromFileCommand;
 import com.prdreview.prd.CreatePrdFromUrlCommand;
 import com.prdreview.prd.PrdDTO;
 import com.prdreview.prd.PrdPageResult;
@@ -25,6 +28,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -86,6 +93,26 @@ public class PrdController {
         });
 
         return sseEmitter.getEmitter();
+    }
+
+    // ── 5.4b 从文件创建（同步：Tika 解析 + AI 摘要 → DRAFT） ─────────
+
+    @Operation(summary = "从文件创建 PRD（PDF/Word/Markdown/纯文本，≤10MB）")
+    @PostMapping(value = "/from-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PrdResponse createFromFile(@RequestPart("file") MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BizException(ErrorCode.PARAM_INVALID, "上传文件为空");
+        }
+        Long userId = CurrentUser.getCurrentUserId();
+        try {
+            byte[] bytes = file.getBytes();
+            PrdDTO dto = prdService.createFromFile(
+                new CreatePrdFromFileCommand(bytes, file.getOriginalFilename(), userId)
+            );
+            return PrdResponse.from(dto);
+        } catch (IOException e) {
+            throw new BizException(ErrorCode.PRD_FILE_PARSE_FAILED, "读取上传文件失败: " + e.getMessage());
+        }
     }
 
     // ── 5.5 查询详情 ──────────────────────────────────────────────────

@@ -1,0 +1,8 @@
+这是一份测试 PRD 文档,用于验证 DocumentParser 的文本解析能力。
+内容包含中英文混合 mixed content,目的是验证 UTF-8 处理。
+
+# 背景
+本测试样本用于 add-document-parsing change 的单元测试。
+
+# 目标
+确保 .txt 文件能被正确解析为字符串。

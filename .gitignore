@@ -20,6 +20,10 @@ logs/
 # Chroma 向量数据库本地数据
 chroma-data/
 
+# KB Git 仓库本地 clone(运行时生成,可重建)
+bootstrap/kb-data/
+kb-data/
+
 # macOS
 .DS_Store
 

@@ -9,7 +9,9 @@ import com.prdreview.prd.CreatePrdFromUrlCommand;
 import com.prdreview.prd.PrdDTO;
 import com.prdreview.prd.PrdPageResult;
 import com.prdreview.prd.PrdQueryCommand;
+import com.prdreview.prd.CreatePrdFromFileCommand;
 import com.prdreview.prd.UpdatePrdCommand;
+import com.prdreview.prd.validation.PrdInputValidator;
 import com.prdreview.prd.model.Prd;
 import com.prdreview.prd.model.PrdVersion;
 import com.prdreview.prd.repository.PrdRepository;
@@ -58,6 +60,29 @@ public class PrdApplicationService {
         Prd saved = prdRepository.save(prd);
         log.info("创建 URL 路径 PRD id={} url={}", saved.getId(), cmd.sourceUrl());
         return saved.getId();
+    }
+
+    // ── 4.4b 从文件创建（同步：Tika 解析 → AI 摘要 → 直接落 DRAFT） ───
+
+    /** 单文件大小硬上限：10 MB。Spring multipart 已先拦一道，service 兜底防御。 */
+    private static final int MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+    @Transactional
+    public PrdDTO createFromFile(CreatePrdFromFileCommand cmd) {
+        if (cmd.bytes() == null || cmd.bytes().length == 0) {
+            throw new BizException(ErrorCode.PARAM_INVALID, "上传文件为空");
+        }
+        if (cmd.bytes().length > MAX_FILE_SIZE_BYTES) {
+            throw new BizException(ErrorCode.PRD_FILE_TOO_LARGE,
+                "文件大小 " + cmd.bytes().length + " 字节超过 " + MAX_FILE_SIZE_BYTES + " 字节限制");
+        }
+        SummarizeResult result = aiService.summarizeFromFile(cmd.bytes(), cmd.filename());
+        // 不走 INITIALIZING：文件解析+摘要已同步完成，直接落 DRAFT
+        Prd prd = Prd.createFromManual(result.title(), result.content(), cmd.currentUserId());
+        Prd saved = prdRepository.save(prd);
+        log.info("[PRD] createFromFile filename={} prdId={} bytes={}",
+            cmd.filename(), saved.getId(), cmd.bytes().length);
+        return toDTO(saved);
     }
 
     // ── 4.5 完成 AI 初始化（直接提供 title/content） ─────────────────
@@ -145,7 +170,15 @@ public class PrdApplicationService {
         if (!prd.isOwnedBy(currentUserId)) {
             throw new BizException(ErrorCode.FORBIDDEN);
         }
-        prd.submit(); // DRAFT → SUBMITTED（内部校验状态）
+        // 状态前置检查：INITIALIZING / 已提交等状态优先报状态错（PRD_OPERATION_NOT_ALLOWED），
+        // 而不是被内容门槛误判为"内容太短"
+        if (prd.getStatus() != com.prdreview.prd.model.PrdStatus.DRAFT) {
+            throw new BizException(ErrorCode.PRD_OPERATION_NOT_ALLOWED);
+        }
+        // #6 add-prd-input-validation：状态合法后过输入门槛（字数 + 必要章节）
+        // 校验失败抛 BizException(PRD_CONTENT_TOO_SHORT / PRD_MISSING_REQUIRED_SECTION)
+        PrdInputValidator.validateForSubmit(prd.getTitle(), prd.getContent());
+        prd.submit(); // DRAFT → SUBMITTED（此时 submit() 内部状态校验是兜底）
         prdRepository.update(prd);
 
         // 创建版本快照（含 sourceUrl）

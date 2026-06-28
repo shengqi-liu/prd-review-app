@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
  *   <li>{@code pollInitialDelayMs} — 启动后首次调度延迟，默认 1 分钟</li>
  *   <li>{@code cloneBaseDir} — 本地 clone 根目录</li>
  *   <li>{@code cloneTimeoutMs} — 首次 clone 超时，默认 5 分钟</li>
+ *   <li>{@code fetchTimeoutMs} — 增量 fetch 超时，默认 1 分钟（fix-kb-sync-stuck-recovery）</li>
  * </ul>
  */
 @Data
@@ -27,4 +28,7 @@ public class KbGitProperties {
     private String cloneBaseDir = "./kb-data";
 
     private long cloneTimeoutMs = 300_000L;
+
+    /** 增量 fetch 超时（毫秒），默认 60 秒。传给 JGit {@code FetchCommand.setTimeout(int seconds)}。 */
+    private long fetchTimeoutMs = 60_000L;
 }

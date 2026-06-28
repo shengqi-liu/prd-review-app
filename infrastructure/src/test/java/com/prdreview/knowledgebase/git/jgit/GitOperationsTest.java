@@ -2,6 +2,7 @@ package com.prdreview.knowledgebase.git.jgit;
 
 import com.prdreview.common.exception.BizException;
 import com.prdreview.common.exception.ErrorCode;
+import com.prdreview.knowledgebase.git.KbGitProperties;
 import com.prdreview.knowledgebase.git.model.AuthType;
 import com.prdreview.knowledgebase.git.model.ChangeType;
 import com.prdreview.knowledgebase.git.model.MarkdownChange;
@@ -16,12 +17,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -39,7 +42,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("GitOperations 集成测试")
 class GitOperationsTest {
 
-    private final GitOperations git = new GitOperations();
+    private final KbGitProperties properties = new KbGitProperties();
+    private final GitOperations git = new GitOperations(properties);
 
     @TempDir
     Path tmp;
@@ -198,6 +202,77 @@ class GitOperationsTest {
 
     private void writeFile(Path dir, String name, String content) throws IOException {
         Files.writeString(dir.resolve(name), content);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // fix-kb-sync-stuck-recovery：JGit timeout 集成测试
+    // ──────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("clone 远端不响应触发 setTimeout，必须在 timeout × 5 内抛 BizException")
+    void clone_hangServer_timeoutTriggered() throws Exception {
+        // 启 ServerSocket 占住端口但不 accept loop —— TCP backlog 收下连接，
+        // JGit 客户端 send HTTP 请求后等响应直到 read timeout
+        try (ServerSocket noResponse = new ServerSocket(0, 50)) {
+            int port = noResponse.getLocalPort();
+            properties.setCloneTimeoutMs(2000L); // 2 秒
+
+            File target = tmp.resolve("hangclone").toFile();
+            long start = System.currentTimeMillis();
+            assertThatThrownBy(() ->
+                git.cloneRepository("http://127.0.0.1:" + port + "/r.git",
+                    "master", target.getAbsolutePath(), AuthType.NONE, null))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> {
+                    BizException be = (BizException) ex;
+                    // setTimeout 触发 → 包装为 CLONE_FAILED 或 AUTH_FAILED（TransportException）
+                    assertThat(be.getErrorCode()).isIn(
+                        ErrorCode.KB_GIT_CLONE_FAILED, ErrorCode.KB_GIT_AUTH_FAILED);
+                });
+            long elapsed = System.currentTimeMillis() - start;
+
+            // 2s timeout × 5 = 10s 余量（JGit 内部包装异常可能再加几秒）
+            assertThat(elapsed)
+                .as("clone 应在 timeout 范围内返回，否则说明 setTimeout 未生效")
+                .isLessThan(10_000L);
+        }
+    }
+
+    @Test
+    @DisplayName("fetch 远端不响应触发 setTimeout，必须在 timeout × 5 内抛 BizException")
+    void fetch_hangServer_timeoutTriggered() throws Exception {
+        // 先正常 clone 一份，本地有 .git 目录
+        File local = tmp.resolve("hangwork").toFile();
+        git.cloneRepository("file://" + remoteDir.toAbsolutePath(),
+            branch(), local.getAbsolutePath(), AuthType.NONE, null);
+
+        // 改 origin 指向不响应的本地端口
+        try (ServerSocket noResponse = new ServerSocket(0, 50)) {
+            int port = noResponse.getLocalPort();
+            try (Git localGit = Git.open(local)) {
+                var cfg = localGit.getRepository().getConfig();
+                cfg.setString("remote", "origin", "url",
+                    "http://127.0.0.1:" + port + "/r.git");
+                cfg.save();
+            }
+
+            properties.setFetchTimeoutMs(2000L); // 2 秒
+            long start = System.currentTimeMillis();
+            assertThatThrownBy(() ->
+                git.fetchAndReset(local.getAbsolutePath(), branch(),
+                    AuthType.NONE, null))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> {
+                    BizException be = (BizException) ex;
+                    assertThat(be.getErrorCode()).isIn(
+                        ErrorCode.KB_GIT_PULL_FAILED, ErrorCode.KB_GIT_AUTH_FAILED);
+                });
+            long elapsed = System.currentTimeMillis() - start;
+
+            assertThat(elapsed)
+                .as("fetch 应在 timeout 范围内返回，否则说明 setTimeout 未生效")
+                .isLessThan(10_000L);
+        }
     }
 
     private RevCommit commitAndPush(String msg) throws Exception {

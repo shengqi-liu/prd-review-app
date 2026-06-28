@@ -10,6 +10,11 @@ spring:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
     default-property-inclusion: non_null
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 server:
   port: 8080
@@ -37,6 +42,7 @@ kb:
     poll-initial-delay-ms: 60000
     clone-base-dir: ./kb-data
     clone-timeout-ms: 300000
+    fetch-timeout-ms: 60000
 
 management:
   endpoints:

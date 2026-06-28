@@ -15,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
@@ -73,8 +75,15 @@ public class KbRepositoryApplicationService {
         );
         repository.update(withPath);
         log.info("[KB-Repo] created id={} name={} remoteUrl={}", saved.getId(), saved.getName(), saved.getRemoteUrl());
-        // 异步触发首次同步（不阻塞返回）
-        syncTaskService.executeAsync(saved.getId());
+        // 异步触发首次同步：必须在事务提交后才发起，否则 @Async 抢跑会找不到刚 save 的记录
+        // （fix-kb-sync-correctness Bug A 修复）
+        Long savedId = saved.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                syncTaskService.executeAsync(savedId);
+            }
+        });
         return toDTO(repository.findById(saved.getId()), true);
     }
 

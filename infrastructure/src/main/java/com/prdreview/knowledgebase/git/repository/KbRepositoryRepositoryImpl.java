@@ -43,6 +43,17 @@ public class KbRepositoryRepositoryImpl implements KbRepositoryRepository {
     }
 
     @Override
+    public List<KbRepository> findAllSyncing() {
+        // @TableLogic 自动过滤 deleted=0；按 sync_status='SYNCING' 过滤
+        LambdaQueryWrapper<KbRepositoryPO> w = new LambdaQueryWrapper<>();
+        w.eq(KbRepositoryPO::getSyncStatus, "SYNCING")
+            .orderByAsc(KbRepositoryPO::getId);
+        return mapper.selectList(w).stream()
+            .map(KbRepositoryAssembler::toDomain)
+            .toList();
+    }
+
+    @Override
     public boolean existsActive() {
         return mapper.selectCount(new LambdaQueryWrapper<>()) > 0;
     }
@@ -55,8 +66,12 @@ public class KbRepositoryRepositoryImpl implements KbRepositoryRepository {
     }
 
     @Override
-    public void update(KbRepository repository) {
-        mapper.updateById(KbRepositoryAssembler.toPO(repository));
+    public KbRepository update(KbRepository repository) {
+        // MyBatis-Plus @Version 行为：updateById 在成功时会自增 po.version 字段（同时 DB 的 version 也自增）。
+        // 转回 domain 即拿到带最新 version 的对象，调用方可继续 update 而不踩乐观锁冲突。
+        KbRepositoryPO po = KbRepositoryAssembler.toPO(repository);
+        mapper.updateById(po);
+        return KbRepositoryAssembler.toDomain(po);
     }
 
     @Override

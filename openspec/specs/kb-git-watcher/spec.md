@@ -39,6 +39,8 @@
 
 `ERROR` 状态 SHALL 不阻塞下一轮同步——下次定时触发时系统重新尝试，并在 `lastErrorMessage` 写入最新错误内容。
 
+`KbRepositoryRepository.update(KbRepository)` SHALL 返回带最新 `version` 的 domain 对象。调用方在同一执行流内若需要再次 update 同一聚合根，MUST 使用返回值替换本地引用，否则乐观锁条件 `WHERE version = ?` 会失配，update 静默失败 0 行（导致状态卡死、错误信息丢失）。
+
 #### Scenario: 正常同步完成回到 HEALTHY
 - **WHEN** 一次定时同步任务执行成功（无论是否检测到变更）
 - **THEN** `syncStatus` MUST 为 `HEALTHY`，`lastSyncedCommit` MUST 更新为最新 commit，`lastErrorMessage` MUST 为 null
@@ -50,6 +52,14 @@
 #### Scenario: SYNCING 时跳过新一轮调度
 - **WHEN** 定时任务触发时仓库 `syncStatus` 已是 `SYNCING`
 - **THEN** 系统 MUST 跳过本轮，记录 DEBUG 日志，不抛出异常
+
+#### Scenario: 连续 markSyncing + markError 不会因乐观锁冲突而静默失败
+- **WHEN** `KbSyncTaskService.execute()` 流程先调 `markSyncing()` + `update()`，随后因 git 失败再调 `markError()` + `update()`
+- **THEN** 第二次 `update` MUST 影响 1 行（不能 0 行），DB 中 `sync_status` MUST 为 `ERROR`，`last_error_message` MUST 含异常摘要
+
+#### Scenario: update 返回的 domain 对象 version 已自增
+- **WHEN** 调用 `KbRepositoryRepository.update(repo)` 且 update 成功（影响 1 行）
+- **THEN** 返回值 MUST 是一个 `KbRepository` 实例，其 `version` 字段 MUST 等于入参 version + 1
 
 ---
 
@@ -137,6 +147,8 @@
 
 写操作（创建、更新、删除、立即同步）SHALL 仅限 ADMIN 角色。读操作（列表、详情）SHALL 对所有已登录用户开放，但响应中 `authSecret` 字段 SHALL 对非 ADMIN 用户做 mask（返回 `"***"` 或 null）。
 
+`POST /api/v1/kb/repositories` 触发的首次异步同步 SHALL 在创建事务**提交之后**才发起。`@Transactional` 内直接调用 `@Async` 方法存在竞态——异步任务可能在事务提交前抢先执行，导致 `findById` 找不到刚 save 的记录、首次同步被静默跳过。系统 SHALL 使用 `TransactionSynchronizationManager.registerSynchronization` 在 `afterCommit` 阶段触发 `executeAsync`。
+
 #### Scenario: ADMIN 创建仓库
 - **WHEN** ADMIN 发送 `POST /api/v1/kb/repositories`，body 含 name、remoteUrl、branch、authType、authSecret、pollIntervalMs
 - **THEN** 系统 MUST 创建仓库并触发首次异步 clone（不阻塞响应），返回创建后的仓库摘要
@@ -152,6 +164,10 @@
 #### Scenario: ADMIN 触发立即同步
 - **WHEN** ADMIN 发送 `POST /api/v1/kb/repositories/{id}/sync`
 - **THEN** 系统 MUST 异步触发同步任务（不阻塞响应），返回 `syncStatus=SYNCING`；若已是 `SYNCING` 则返回当前状态不重复触发
+
+#### Scenario: 创建仓库的异步同步在事务提交后才发起
+- **WHEN** ADMIN 调用 `create()`，事务进入提交阶段
+- **THEN** `syncTaskService.executeAsync(id)` MUST 在 `afterCommit` 回调中调用（不能在事务方法体内直接调用），保证异步线程的 `findById` 能找到刚 save 的记录
 
 #### Scenario: 普通用户查询凭据被 mask
 - **WHEN** SUBMITTER 发送 `GET /api/v1/kb/repositories/{id}`
@@ -169,3 +185,46 @@
 #### Scenario: 同步任务日志不泄漏凭据
 - **WHEN** 同步任务执行（成功或失败）
 - **THEN** 日志中 MUST 不包含 `authSecret` 真实字符串
+
+---
+
+### Requirement: Git 操作超时保护
+系统 SHALL 给所有 JGit 网络操作（`clone` / `fetch`）传入显式超时，防止远端网络异常导致同步任务无限期阻塞。
+
+- `clone` 操作 SHALL 使用 `kb.git.clone-timeout-ms` 配置（默认 300_000 = 5 分钟），传给 JGit `CloneCommand.setTimeout(int seconds)`，单位换算 `ms → seconds`，最小值 1 秒
+- `fetch` 操作 SHALL 使用 `kb.git.fetch-timeout-ms` 配置（默认 60_000 = 1 分钟），传给 JGit `FetchCommand.setTimeout(int seconds)`
+- 超时触发时 SHALL 抛出 `BizException(KB_GIT_CLONE_FAILED / KB_GIT_PULL_FAILED)`，由上层 `KbSyncTaskService` 捕获并调用 `markError`
+
+#### Scenario: clone 操作传入正确超时
+- **WHEN** `GitOperations.cloneRepository` 被调用
+- **THEN** 内部构造的 `CloneCommand` MUST 调用 `.setTimeout(N)`，其中 `N = max(1, cloneTimeoutMs / 1000)`
+
+#### Scenario: fetch 操作传入正确超时
+- **WHEN** `GitOperations.fetchAndReset` 被调用
+- **THEN** 内部构造的 `FetchCommand` MUST 调用 `.setTimeout(N)`，其中 `N = max(1, fetchTimeoutMs / 1000)`
+
+#### Scenario: 网络 hang 触发超时异常
+- **WHEN** 远端不响应（指向不可达的本地端口模拟）且操作超过配置的 timeout
+- **THEN** 系统 MUST 在 `timeout + 缓冲` 时间内抛出 `BizException`（`KB_GIT_CLONE_FAILED` 或 `KB_GIT_PULL_FAILED`），错误信息含 `Timeout` 或 `timed out` 关键字
+
+---
+
+### Requirement: 启动时清理残留 SYNCING 状态
+系统 SHALL 在应用启动时一次性清理所有 `sync_status = SYNCING` 的仓库记录，将其转为 `ERROR`，避免因上次进程崩溃残留的状态阻塞后续调度。
+
+- 清理 SHALL 由实现 `ApplicationRunner` 接口的 `KbSyncStartupCleanup` 完成，由 Spring 在 ApplicationContext 完全就绪后调用一次
+- 清理 SHALL 通过 `KbRepositoryRepository.findAllSyncing()` 获取所有 SYNCING 仓库，对每个调用 `markError("startup cleanup: stale SYNCING from previous shutdown/crash")` 并 `repository.update(repo)` 持久化
+- 清理 SHALL 通过 WARN 级别日志输出被清理的仓库 id 与 name，便于运维定位历史问题
+- 清理过程 SHALL NOT 调用任何 git/网络操作（保证启动不被慢操作拖延）
+
+#### Scenario: 启动清理把残留 SYNCING 转为 ERROR
+- **WHEN** 应用启动时 DB 中存在 `sync_status = SYNCING` 的仓库
+- **THEN** `KbSyncStartupCleanup.run()` MUST 将该仓库 `sync_status` 改为 `ERROR`，`lastErrorMessage` 含 `startup cleanup` 关键字
+
+#### Scenario: HEALTHY / ERROR 状态不受启动清理影响
+- **WHEN** 应用启动时 DB 中的仓库状态为 `HEALTHY` 或 `ERROR`
+- **THEN** 启动清理 MUST 不修改该仓库任何字段
+
+#### Scenario: 启动清理后调度可正常 fetch
+- **WHEN** 启动清理把卡死的仓库改为 `ERROR` 后，`KbSyncScheduler` 首次轮询触发
+- **THEN** 系统 MUST 正常执行同步流程（fetch / clone），按照 ERROR 不阻塞同步的既有规则
