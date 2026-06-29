@@ -44,6 +44,13 @@ kb:
     clone-timeout-ms: 300000
     fetch-timeout-ms: 60000
 
+llm:
+  cache:
+    enabled: true
+    ttl-days: 30
+    max-entries: 10000
+    cleanup-interval-ms: 3600000
+
 management:
   endpoints:
     web:

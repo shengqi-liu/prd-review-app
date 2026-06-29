@@ -3,14 +3,19 @@ package com.prdreview.ai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.prdreview.ai.cache.LlmCacheKeys;
+import com.prdreview.ai.cache.LlmCacheService;
 import com.prdreview.ai.dto.SummarizeResult;
 import com.prdreview.ai.service.AiService;
 import com.prdreview.common.exception.AiServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -24,20 +29,31 @@ public class AiServiceImpl implements AiService {
 
     private static final int LLM_TIMEOUT_SECONDS = 30;
     private static final int FALLBACK_CONTENT_LENGTH = 500;
+    /** 缓存 key 的 provider 标识(我们走 OpenAI 兼容协议指向 DeepSeek)。 */
+    private static final String LLM_PROVIDER = "openai-compatible";
 
     private final ChatClient chatClient;
     private final DocumentFetcher documentFetcher;
     private final DocumentParser documentParser;
     private final ObjectMapper objectMapper;
+    /** LLM 响应缓存(可选);测试场景注入 null 也能正常跑。 */
+    private final LlmCacheService llmCacheService;
+    private final String llmModel;
 
+    @Autowired
     public AiServiceImpl(ChatClient.Builder chatClientBuilder,
                          DocumentFetcher documentFetcher,
                          DocumentParser documentParser,
-                         ObjectMapper objectMapper) {
+                         ObjectMapper objectMapper,
+                         @org.springframework.beans.factory.annotation.Autowired(required = false)
+                         LlmCacheService llmCacheService,
+                         @Value("${spring.ai.openai.chat.options.model:unknown}") String llmModel) {
         this.chatClient = chatClientBuilder.build();
         this.documentFetcher = documentFetcher;
         this.documentParser = documentParser;
         this.objectMapper = objectMapper;
+        this.llmCacheService = llmCacheService;
+        this.llmModel = llmModel;
     }
 
     @Override
@@ -61,10 +77,25 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public SummarizeResult summarizeText(String rawText) {
-        log.info("[AI] summarizeText chars={}", rawText.length());
+        log.info("[AI] summarizeText chars={}", rawText == null ? 0 : rawText.length());
 
+        // 1) 缓存查询(失败降级)
+        String cacheKey = LlmCacheKeys.compute(LLM_PROVIDER, llmModel, rawText);
+        if (llmCacheService != null) {
+            Optional<String> cached = llmCacheService.get(cacheKey);
+            if (cached.isPresent()) {
+                try {
+                    return objectMapper.readValue(cached.get(), SummarizeResult.class);
+                } catch (Exception ex) {
+                    // 反序列化失败(老格式数据)→ 当作 miss,继续走 LLM
+                    log.warn("[AI] 缓存反序列化失败 key={} err={}",
+                        cacheKey.substring(0, 8), ex.getMessage());
+                }
+            }
+        }
+
+        // 2) 真调 LLM
         String prompt = buildPrompt(rawText);
-
         String aiResponse;
         try {
             aiResponse = chatClient.prompt()
@@ -78,7 +109,20 @@ public class AiServiceImpl implements AiService {
             throw new AiServiceException("AI 调用失败: " + e.getMessage(), e);
         }
 
-        return parseResult(aiResponse, rawText);
+        // 3) 解析:成功才写缓存,fallback 不写
+        Optional<SummarizeResult> parsed = parseResultIfValid(aiResponse);
+        SummarizeResult result = parsed.orElseGet(() -> fallback(rawText));
+        if (parsed.isPresent() && llmCacheService != null) {
+            try {
+                String json = objectMapper.writeValueAsString(result);
+                int tokenEstimate = rawText == null ? 0 : rawText.length() / 4;
+                llmCacheService.put(cacheKey, json, LLM_PROVIDER, llmModel,
+                    LlmCacheKeys.preview(rawText), tokenEstimate);
+            } catch (Exception ex) {
+                log.warn("[AI] 缓存写入失败,不影响响应: {}", ex.getMessage());
+            }
+        }
+        return result;
     }
 
     @Override
@@ -123,27 +167,28 @@ public class AiServiceImpl implements AiService {
                 """ + truncated;
     }
 
-    private SummarizeResult parseResult(String aiResponse, String rawText) {
+    /**
+     * 尝试解析 AI 响应为合法 SummarizeResult,失败返回 empty(供上层决定是否走 fallback)。
+     * 合法 = JSON 含 title + content 且都非空。
+     */
+    private Optional<SummarizeResult> parseResultIfValid(String aiResponse) {
         if (aiResponse == null || aiResponse.isBlank()) {
-            log.warn("[AI] AI 返回空响应，触发回退策略");
-            return fallback(rawText);
+            log.warn("[AI] AI 返回空响应");
+            return Optional.empty();
         }
-
-        // 尝试从响应中提取 JSON（可能有前缀文字）
         String json = extractJson(aiResponse);
         try {
             JsonNode node = objectMapper.readTree(json);
             String title = node.path("title").asText(null);
             String content = node.path("content").asText(null);
             if (title != null && !title.isBlank() && content != null && !content.isBlank()) {
-                return new SummarizeResult(title.trim(), content.trim());
+                return Optional.of(new SummarizeResult(title.trim(), content.trim()));
             }
         } catch (JsonProcessingException e) {
-            log.warn("[AI] JSON 解析失败，触发回退策略 response={}", aiResponse.substring(0, Math.min(200, aiResponse.length())));
+            log.warn("[AI] JSON 解析失败 response={}", aiResponse.substring(0, Math.min(200, aiResponse.length())));
         }
-
-        log.warn("[AI] AI 响应非预期 JSON，触发回退策略 response={}", aiResponse.substring(0, Math.min(200, aiResponse.length())));
-        return fallback(rawText);
+        log.warn("[AI] AI 响应非预期 JSON,将触发 fallback");
+        return Optional.empty();
     }
 
     /**

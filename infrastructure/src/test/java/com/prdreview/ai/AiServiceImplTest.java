@@ -18,7 +18,9 @@ import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,7 +53,9 @@ class AiServiceImplTest {
     @BeforeEach
     void setUp() {
         when(chatClientBuilder.build()).thenReturn(chatClient);
-        aiService = new AiServiceImpl(chatClientBuilder, documentFetcher, documentParser, new ObjectMapper());
+        // #16:LLM 缓存可选,这里传 null 让代码走"无缓存"分支(其他用例需缓存的可单独构造)
+        aiService = new AiServiceImpl(chatClientBuilder, documentFetcher, documentParser,
+            new ObjectMapper(), null, "test-model");
     }
 
     @Test
@@ -258,5 +262,75 @@ class AiServiceImplTest {
 
         // 不应触达 chat client
         org.mockito.Mockito.verify(chatClient, org.mockito.Mockito.never()).prompt();
+    }
+
+    // ──────────────────────────────────────────────────
+    // #16 LlmCacheService 接入路径
+    // ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("summarizeText — 缓存命中跳过 LLM,反序列化 JSON 直接返回")
+    void summarizeText_cacheHit_skipsLlm() throws Exception {
+        // 装一个带缓存的 service
+        com.prdreview.ai.cache.LlmCacheService cache =
+            org.mockito.Mockito.mock(com.prdreview.ai.cache.LlmCacheService.class);
+        AiServiceImpl svc = new AiServiceImpl(chatClientBuilder, documentFetcher, documentParser,
+            new ObjectMapper(), cache, "deepseek-chat");
+
+        String json = "{\"title\":\"缓存命中\",\"content\":\"来自缓存的内容\"}";
+        when(cache.get(anyString())).thenReturn(java.util.Optional.of(json));
+
+        SummarizeResult r = svc.summarizeText("hello world");
+
+        assertThat(r.title()).isEqualTo("缓存命中");
+        assertThat(r.content()).isEqualTo("来自缓存的内容");
+        // ChatClient 完全没被调用
+        verify(chatClient, never()).prompt();
+        // put 没被调用(只读不写)
+        verify(cache, never()).put(anyString(), anyString(), anyString(), anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    @DisplayName("summarizeText — 缓存 miss 走 LLM,成功后写回缓存")
+    void summarizeText_cacheMiss_invokesLlmAndCaches() {
+        com.prdreview.ai.cache.LlmCacheService cache =
+            org.mockito.Mockito.mock(com.prdreview.ai.cache.LlmCacheService.class);
+        AiServiceImpl svc = new AiServiceImpl(chatClientBuilder, documentFetcher, documentParser,
+            new ObjectMapper(), cache, "deepseek-chat");
+
+        when(cache.get(anyString())).thenReturn(java.util.Optional.empty());
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn(
+            "{\"title\":\"AI 标题\",\"content\":\"AI 内容摘要\"}");
+
+        SummarizeResult r = svc.summarizeText("some raw text");
+
+        assertThat(r.title()).isEqualTo("AI 标题");
+        verify(cache).put(anyString(), anyString(), eq("openai-compatible"),
+            eq("deepseek-chat"), anyString(), anyInt());
+    }
+
+    @Test
+    @DisplayName("summarizeText — fallback 响应不写缓存(避免低质结果固化)")
+    void summarizeText_fallback_doesNotCache() {
+        com.prdreview.ai.cache.LlmCacheService cache =
+            org.mockito.Mockito.mock(com.prdreview.ai.cache.LlmCacheService.class);
+        AiServiceImpl svc = new AiServiceImpl(chatClientBuilder, documentFetcher, documentParser,
+            new ObjectMapper(), cache, "deepseek-chat");
+
+        when(cache.get(anyString())).thenReturn(java.util.Optional.empty());
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(callResponseSpec);
+        // 非 JSON → 触发 fallback
+        when(callResponseSpec.content()).thenReturn("这不是 JSON 格式");
+
+        SummarizeResult r = svc.summarizeText("some text for fallback test");
+
+        assertThat(r).isNotNull(); // fallback 一定有返回值
+        verify(cache, never()).put(anyString(), anyString(), anyString(),
+            anyString(), anyString(), anyInt());
     }
 }
